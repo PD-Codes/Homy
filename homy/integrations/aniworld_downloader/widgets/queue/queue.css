@@ -1,0 +1,7 @@
+.aniworld-queue-list { display: flex; flex-direction: column; gap: 6px; overflow: auto; max-height: 100%; }
+.aniworld-queue-row {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+    padding: 8px; border-radius: 6px; background: var(--glass-bg, rgba(255,255,255,0.04)); font-size: 0.8rem;
+}
+.aniworld-queue-title { flex: 1; line-height: 1.3; }
+.aniworld-queue-status { font-size: 0.68rem; text-transform: uppercase; opacity: 0.8; white-space: nowrap; }

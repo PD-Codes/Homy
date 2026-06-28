@@ -1,0 +1,393 @@
+/* Favorites / Bookmarks Module CSS */
+
+/* Widget Grid View */
+.fav-grid-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 12px;
+    height: 100%;
+    align-content: flex-start;
+}
+
+.fav-grid-layout.fav-size-sm {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 8px;
+}
+
+.fav-grid-layout.fav-size-lg {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 14px;
+}
+
+.fav-buttons-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-content: flex-start;
+}
+
+.fav-button-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    max-width: 100%;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.fav-button-item:hover {
+    border-color: var(--primary);
+    color: var(--text-primary);
+    background: rgba(99, 102, 241, 0.08);
+}
+
+.fav-button-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.fav-buttons-layout.fav-size-sm .fav-button-item {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+}
+
+.fav-buttons-layout.fav-size-lg .fav-button-item {
+    padding: 10px 18px;
+}
+
+.fav-buttons-layout .fav-icon-wrapper {
+    width: 22px;
+    height: 22px;
+}
+
+.fav-tile-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    gap: 8px;
+    transition: 
+        transform var(--transition-fast), 
+        border-color var(--transition-fast),
+        background-color var(--transition-fast),
+        box-shadow var(--transition-fast);
+}
+
+.fav-tile-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+    box-shadow: var(--shadow-sm), 0 4px 10px rgba(99, 102, 241, 0.1);
+}
+
+.fav-icon-wrapper {
+    width: 38px;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    transition: transform var(--transition-fast);
+}
+.fav-tile-item:hover .fav-icon-wrapper {
+    transform: scale(1.1);
+    background: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+.fav-icon-wrapper img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+.fav-icon-wrapper i {
+    width: 18px;
+    height: 18px;
+}
+
+.fav-tile-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--transition-fast);
+}
+.fav-tile-item:hover .fav-tile-label {
+    color: var(--text-primary);
+}
+
+/* Widget List View */
+.fav-list-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.fav-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.fav-list-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+.fav-list-item .fav-icon-wrapper {
+    width: 28px;
+    height: 28px;
+}
+.fav-list-item .fav-icon-wrapper img {
+    width: 16px;
+    height: 16px;
+}
+.fav-list-item .fav-icon-wrapper i {
+    width: 14px;
+    height: 14px;
+}
+
+/* Standalone Favorites Manager view */
+.favorites-wrapper {
+    padding: 24px;
+}
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 18px;
+    margin-bottom: 24px;
+}
+.section-header h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+.fav-category-section {
+    margin-bottom: 32px;
+}
+.fav-category-sort-list {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fav-category-sort-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg-secondary, rgba(0, 0, 0, 0.2));
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    border-radius: 8px;
+    cursor: grab;
+}
+
+.fav-category-sort-item.dragging {
+    opacity: 0.55;
+}
+
+.fav-category-sort-grip {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.fav-category-sort-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fav-category-sort-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.fav-category-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 16px;
+    border-left: 3px solid var(--primary);
+    padding-left: 10px;
+}
+.fav-manager-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+.fav-manager-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-card);
+    min-width: 0;
+}
+.fav-card-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.fav-card-info > div:last-child {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.fav-manager-card .fav-actions,
+.fav-manager-card .btn-group {
+    flex-shrink: 0;
+}
+.fav-manager-icon-slot .fav-icon-wrapper {
+    width: 40px;
+    height: 40px;
+}
+
+.fav-manager-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+.fav-manager-icon i {
+    width: 16px;
+    height: 16px;
+}
+.fav-manager-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.fav-manager-title > span,
+.fav-manager-title {
+    min-width: 0;
+}
+.fav-manager-url {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 180px;
+}
+
+/* Dashboard Favorites Collapsible Categories */
+.fav-widget-categories-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+}
+
+.fav-widget-category {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fav-widget-cat-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: color var(--transition-fast) ease, border-color var(--transition-fast) ease;
+}
+
+.fav-widget-cat-header:hover {
+    color: var(--primary);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+.fav-cat-arrow {
+    width: 14px;
+    height: 14px;
+    transition: transform var(--transition-fast) ease;
+    color: var(--text-muted);
+}
+
+.fav-widget-cat-header:hover .fav-cat-arrow {
+    color: var(--primary);
+}
+
+/* Category Collapse Animations and States */
+.fav-widget-category.collapsed .fav-cat-arrow {
+    transform: rotate(-90deg);
+}
+
+.fav-widget-category.collapsed .fav-widget-cat-body {
+    display: none !important;
+}
+
+/* Private Lock Badges */
+.fav-tile-item {
+    position: relative;
+}
+.fav-tile-item .fav-lock-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 12px;
+    height: 12px;
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.fav-list-item {
+    position: relative;
+}
+.fav-list-item .fav-lock-badge {
+    margin-left: auto;
+    width: 12px;
+    height: 12px;
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+

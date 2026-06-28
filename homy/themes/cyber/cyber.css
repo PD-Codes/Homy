@@ -1,0 +1,35 @@
+:root {
+    --bg-base: #050505;
+    --bg-surface: rgba(10, 10, 10, 0.95);
+    --bg-card: rgba(20, 20, 20, 0.9);
+    --bg-card-rgb: 20, 20, 20;
+    --bg-card-solid: rgb(20, 20, 20);
+    --border-color: #39ff14;
+    --border-glow: rgba(57, 255, 20, 0.3);
+    
+    --text-primary: #f0fdf4;
+    --text-secondary: #d1fae5;
+    --text-muted: #9ca3af;
+    
+    --primary: #39ff14;
+    --primary-hover: #ff007f;
+    --primary-glow: rgba(57, 255, 20, 0.5);
+    
+    --success: #00ffff;
+    --danger: #ff007f;
+    --warning: #ffff00;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-glow: 0 0 10px 1px var(--primary-glow);
+    
+    --backdrop-blur: blur(0px);
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s ease;
+    --transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}

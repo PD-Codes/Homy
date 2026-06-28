@@ -1,0 +1,182 @@
+.warning-map-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding: 5px;
+    background: transparent;
+}
+.warning-map-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: var(--radius-md, 8px);
+}
+
+/* ---- Interactive vector map ---- */
+.warning-map-card.wm-interactive {
+    position: relative;
+    padding: 8px;
+}
+.wm-svg {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    display: block;
+}
+.wm-state {
+    fill: var(--bg-card-solid, rgba(255, 255, 255, 0.04));
+    stroke: var(--border-color, rgba(255, 255, 255, 0.18));
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+.wm-warn {
+    fill-opacity: 0.55;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    cursor: pointer;
+    transition: fill-opacity 0.12s ease;
+}
+.wm-warn:hover,
+.wm-warn.active {
+    fill-opacity: 0.85;
+    stroke-width: 2.5;
+}
+
+/* "You are here" marker for the configured city */
+.wm-marker { pointer-events: none; }
+.wm-marker-dot {
+    fill: #2196f3;
+    stroke: #fff;
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+}
+.wm-marker-pulse {
+    fill: #2196f3;
+    opacity: 0.45;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: wm-pulse 2s ease-out infinite;
+}
+@keyframes wm-pulse {
+    0%   { transform: scale(0.6); opacity: 0.5; }
+    70%  { transform: scale(2.2); opacity: 0; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .wm-marker-pulse { animation: none; opacity: 0.3; }
+}
+
+/* Active-warning counter badge */
+.wm-count {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    background: var(--bg-surface, rgba(20, 26, 38, 0.8));
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+    pointer-events: none;
+}
+.wm-count i { width: 14px; height: 14px; }
+.wm-count.has-warn { color: #ffb84d; }
+.wm-count.no-warn { color: #4caf82; }
+
+/* Compact hover label: Landkreis name + warning count */
+.wm-hoverlabel {
+    position: absolute;
+    z-index: 6;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 240px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--bg-surface, rgba(15, 20, 30, 0.96));
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+    box-shadow: var(--shadow-lg, 0 8px 28px rgba(0, 0, 0, 0.45));
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    font-size: 0.74rem;
+    line-height: 1.2;
+    pointer-events: none;
+    white-space: nowrap;
+}
+.wm-hoverlabel[hidden] { display: none; }
+.wm-hl-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.wm-hl-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.wm-hl-count { color: var(--text-muted, #9aa4b2); flex: none; }
+
+/* Separator between stacked warnings in the click panel */
+.wm-tip-sep {
+    height: 1px;
+    margin: 8px 0;
+    background: var(--border-color, rgba(255, 255, 255, 0.12));
+}
+
+/* Hover tooltip */
+.wm-tooltip {
+    position: absolute;
+    z-index: 5;
+    max-width: 260px;
+    padding: 9px 11px;
+    border-radius: var(--radius-md, 8px);
+    background: var(--bg-surface, rgba(15, 20, 30, 0.96));
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+    box-shadow: var(--shadow-lg, 0 8px 28px rgba(0, 0, 0, 0.45));
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    font-size: 0.76rem;
+    line-height: 1.35;
+    pointer-events: none;
+}
+.wm-tooltip.pinned { pointer-events: auto; }
+.wm-tooltip[hidden] { display: none; }
+.wm-tip-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+    border-bottom: 2px solid;
+}
+.wm-tip-head strong { flex: 1; font-size: 0.82rem; }
+.wm-tip-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.wm-tip-sev {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.03em;
+}
+.wm-tip-area {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+.wm-tip-area i { width: 12px; height: 12px; flex: none; opacity: 0.7; }
+.wm-tip-time { color: var(--text-muted, #9aa4b2); margin-bottom: 4px; }
+.wm-tip-desc,
+.wm-tip-instr {
+    color: var(--text-muted, #9aa4b2);
+    max-height: 7.5em;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+.wm-tip-instr {
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+}

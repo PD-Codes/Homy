@@ -1,0 +1,10 @@
+{
+  "name": "homy-browser-extension",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Homy companion extension — build produces homy-<version>-<browser>.zip",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "type": "module"
+}

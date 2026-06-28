@@ -1,0 +1,8 @@
+{
+  "type": "template",
+  "name": "Beispiel Dashboard-Layout",
+  "description": "Referenz-Paket mit optionaler layout.json und Vorschaubild preview.png.",
+  "version": "1.0.0",
+  "author": "Homy",
+  "includes": ["widgets", "tabs", "settings"]
+}

@@ -1,0 +1,13 @@
+.iw-card { display:flex; flex-direction:column; gap:10px; height:100%; }
+.iw-metrics { display:flex; gap:12px; flex-wrap:wrap; }
+.iw-metric { display:flex; flex-direction:column; gap:2px; }
+.iw-metric .label { font-size:0.72rem; color:var(--text-muted); }
+.iw-metric .val { font-size:1.1rem; font-weight:700; }
+.ph-section-title { font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+.iw-list { display:flex; flex-direction:column; gap:4px; overflow-y:auto; max-height:100%; }
+.iw-row { padding:4px 6px; border-radius:4px; font-size:0.78rem; position:relative; }
+.ph-bar-wrap { position:absolute; inset:0; border-radius:4px; overflow:hidden; opacity:0.12; }
+.ph-bar { height:100%; background:var(--danger,#e74c3c); }
+.iw-row-title { position:relative; font-weight:500; font-family:monospace; font-size:0.75rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.iw-row-meta { position:relative; font-size:0.7rem; color:var(--text-muted); text-align:right; }
+.iw-empty { text-align:center; color:var(--text-muted); padding:16px; font-size:0.85rem; }

@@ -1,0 +1,7 @@
+.jv-card { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:6px; }
+.jv-label { font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+.jv-value { font-size:2rem; font-weight:700; word-break:break-all; text-align:center; }
+.jv-unit { font-size:1rem; font-weight:400; color:var(--text-muted); margin-left:4px; }
+.jv-path { font-size:0.7rem; color:var(--text-muted); font-family:monospace; }
+.jv-keys { display:flex; flex-wrap:wrap; gap:4px; justify-content:center; }
+.jv-key { font-size:0.68rem; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.06); color:var(--text-muted); font-family:monospace; }

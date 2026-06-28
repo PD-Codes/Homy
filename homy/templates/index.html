@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homy</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Core & Component Stylesheets -->
+    <link rel="stylesheet" href="/static/css/core.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/asset_library.css">
+    <link rel="stylesheet" href="/static/css/toggle_switch.css">
+    <link rel="stylesheet" href="/static/css/avatar_crop.css">
+    <link id="active-theme-link" rel="stylesheet" href="">
+    <!-- Load the saved theme immediately (before the blocking scripts below) so the
+         themed background paints right away instead of showing a gray flash. -->
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('theme') || 'dark';
+                if (t === 'custom') t = 'dark';
+                document.documentElement.setAttribute('data-theme', t);
+                document.getElementById('active-theme-link').href = '/themes/' + t + '/' + t + '.css';
+            } catch (e) { /* localStorage unavailable — fallback tokens in core.css apply */ }
+        })();
+    </script>
+
+    <!-- Lucide Icons (pinned version) -->
+    <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+</head>
+<body class="sidebar-layout">
+    
+    <!-- App Container -->
+    <div id="app-container" class="app-grid">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="app-sidebar" class="sidebar">
+            <button type="button" id="btn-sidebar-collapse" class="icon-btn sidebar-collapse-btn" data-i18n-title="sidebar_collapse" title="Sidebar einklappen" aria-expanded="true">
+                <i data-lucide="chevrons-left"></i>
+            </button>
+            <div class="sidebar-brand">
+                <img id="site-brand-logo" class="brand-logo-img hidden" alt="" width="28" height="28">
+                <i data-lucide="layout-dashboard" class="brand-icon"></i>
+                <span class="brand-text">Homy</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-nav="dashboard">
+                    <i data-lucide="grid"></i>
+                    <span data-i18n="nav_dashboard">Dashboard</span>
+                </a>
+                <a href="#mobile-dashboard" class="nav-item" data-nav="mobile-dashboard">
+                    <i data-lucide="smartphone"></i>
+                    <span data-i18n="nav_mobile_dashboard">Mobile Dashboard</span>
+                </a>
+                <a href="#favorites" class="nav-item" data-nav="favorites">
+                    <i data-lucide="star"></i>
+                    <span data-i18n="nav_favorites">Favoriten</span>
+                </a>
+                <a href="#integrations" class="nav-item" data-nav="integrations">
+                    <i data-lucide="plug"></i>
+                    <span data-i18n="nav_integrations">Integrationen</span>
+                </a>
+                <a href="#settings" class="nav-item" data-nav="settings">
+                    <i data-lucide="settings"></i>
+                    <span data-i18n="nav_settings">Einstellungen</span>
+                </a>
+                <a href="#admin" id="nav-admin" class="nav-item admin-only hidden" data-nav="admin">
+                    <i data-lucide="shield-check"></i>
+                    <span data-i18n="nav_admin">Admin Bereich</span>
+                </a>
+            </nav>
+
+            <div id="sidebar-dashboard-actions" class="sidebar-dashboard-actions"></div>
+            
+            <div class="sidebar-footer">
+                <div id="user-profile-dropdown" class="user-profile-dropdown hidden">
+                    <button type="button" id="btn-profile-open" class="user-profile-menu-item"><i data-lucide="user"></i> <span data-i18n="profile_menu_open">Profil</span></button>
+                    <button type="button" id="btn-password-open" class="user-profile-menu-item"><i data-lucide="key"></i> <span data-i18n="profile_menu_password">Passwort ändern</span></button>
+                    <button type="button" id="btn-logout-menu" class="user-profile-menu-item"><i data-lucide="log-out"></i> <span data-i18n="btn_logout">Abmelden</span></button>
+                </div>
+                <div id="user-profile" class="user-profile hidden" role="button" tabindex="0">
+                    <div id="profile-avatar" class="user-avatar">
+                        <i data-lucide="user"></i>
+                    </div>
+                    <div class="user-info">
+                        <div id="profile-username" class="profile-name">Username</div>
+                        <div id="profile-role" class="profile-role">Admin</div>
+                    </div>
+                    <i data-lucide="chevron-up" class="user-profile-chevron"></i>
+                    <button id="btn-logout" class="icon-btn hidden" title="Abmelden" aria-hidden="true">
+                        <i data-lucide="log-out"></i>
+                    </button>
+                </div>
+                <button id="btn-login-trigger" class="btn btn-outline btn-full">
+                    <i data-lucide="log-in"></i>
+                    <span data-i18n="btn_login">Anmelden</span>
+                </button>
+            </div>
+        </aside>
+
+        <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
+        <!-- Main Content Area -->
+        <main id="app-main" class="main-content">
+
+            <!-- Tab background layers — anchored to the non-scrolling main area so they stay static while .content-body scrolls -->
+            <div id="tab-background-layer" class="tab-background-layer" aria-hidden="true"></div>
+            <div id="mobile-tab-background-layer" class="tab-background-layer" aria-hidden="true"></div>
+
+            <!-- Top Bar (Header) -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button id="btn-sidebar-toggle" class="icon-btn lg-only">
+                        <i data-lucide="menu"></i>
+                    </button>
+                    <h1 id="page-title" class="page-title" data-i18n="nav_dashboard">Dashboard</h1>
+                </div>
+                
+                <div class="top-bar-right">
+                    <!-- Quick actions / Edit buttons -->
+                    <div id="dashboard-controls" class="dashboard-controls">
+                        <button id="btn-edit-dashboard" class="btn btn-primary hidden" data-i18n-title="btn_edit_dashboard">
+                            <i data-lucide="edit-3"></i>
+                            <span data-i18n="btn_edit_dashboard">Layout bearbeiten</span>
+                        </button>
+                        <div id="edit-mode-actions" class="edit-actions hidden">
+                            <button id="btn-add-widget" class="btn btn-outline" data-i18n-title="btn_add_widget">
+                                <i data-lucide="plus"></i>
+                                <span data-i18n="btn_add_widget">Widget hinzufügen</span>
+                            </button>
+                            <button id="btn-save-layout" class="btn btn-success" data-i18n-title="btn_save_layout">
+                                <i data-lucide="check"></i>
+                                <span data-i18n="btn_save_layout">Speichern</span>
+                            </button>
+                            <button id="btn-cancel-layout" class="btn btn-danger" data-i18n-title="btn_cancel_layout">
+                                <i data-lucide="x"></i>
+                                <span data-i18n="btn_cancel_layout">Abbrechen</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Dynamic Content Sections -->
+            <div class="content-body">
+                
+                <!-- 1. Dashboard View -->
+                <section id="section-dashboard" class="app-section active">
+                    <!-- Public-layout edit banner (shown only while editing the guest dashboard) -->
+                    <div id="public-layout-banner" class="public-layout-banner hidden" role="status">
+                        <i data-lucide="globe"></i>
+                        <span class="public-layout-banner-text" data-i18n="public_layout_warning">You are editing the public guest layout!</span>
+                        <button type="button" id="btn-exit-public-dashboard" class="btn btn-sm btn-outline">
+                            <i data-lucide="log-out"></i>
+                            <span data-i18n="btn_exit_public">Back to my dashboard</span>
+                        </button>
+                    </div>
+                    <!-- Dashboard Tabs Bar -->
+                    <div id="dashboard-tabs-container" class="dashboard-tabs-container">
+                        <div id="dashboard-tabs" class="dashboard-tabs">
+                            <!-- Injected dynamically -->
+                        </div>
+                        <div id="dashboard-tabs-edit" class="dashboard-tabs-edit hidden">
+                            <button id="btn-add-tab" class="btn btn-outline btn-sm" type="button">
+                                <i data-lucide="plus"></i>
+                                <span data-i18n="tab_add_btn">Add tab</span>
+                            </button>
+                        </div>
+                        <div id="dashboard-layout-actions" class="dashboard-layout-actions hidden" aria-label="Layout actions"></div>
+                    </div>
+                    
+                    <div class="grid-container-wrapper">
+                        <!-- Custom Drag & Drop Grid -->
+                        <div id="dashboard-grid" class="dashboard-grid">
+                            <!-- Widgets will be loaded here dynamically -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Mobile Dashboard View -->
+                <section id="section-mobile-dashboard" class="app-section mobile-dashboard-section">
+                    <div id="mobile-dashboard-tabs-container" class="dashboard-tabs-container">
+                        <div id="mobile-dashboard-tabs" class="dashboard-tabs"></div>
+                        <div id="mobile-dashboard-tabs-edit" class="dashboard-tabs-edit hidden">
+                            <button id="btn-mobile-add-tab" class="btn btn-outline btn-sm" type="button">
+                                <i data-lucide="plus"></i>
+                                <span data-i18n="tab_add_btn">Add tab</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid-container-wrapper mobile-grid-wrapper">
+                        <div id="mobile-dashboard-grid" class="dashboard-grid mobile-dashboard-grid"></div>
+                    </div>
+                </section>
+                
+                <!-- 2. Favorites Manager View -->
+                <section id="section-favorites" class="app-section">
+                    <div class="favorites-wrapper glass">
+                        <div class="section-header">
+                            <h2 data-i18n="fav_manager_title">Favoriten verwalten</h2>
+                            <div class="favorites-header-actions hidden" id="favorites-header-actions">
+                                <button type="button" id="btn-sort-categories" class="btn btn-secondary">
+                                    <i data-lucide="arrow-up-down"></i>
+                                    <span data-i18n="fav_sort_categories">Kategorien sortieren</span>
+                                </button>
+                                <button type="button" id="btn-add-category" class="btn btn-secondary">
+                                    <i data-lucide="folder-plus"></i>
+                                    <span data-i18n="fav_add_category">Kategorie hinzufügen</span>
+                                </button>
+                                <button type="button" id="btn-add-favorite" class="btn btn-primary">
+                                    <i data-lucide="plus"></i>
+                                    <span data-i18n="btn_add_fav">Link hinzufügen</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="favorites-categories" class="favorites-categories">
+                            <!-- Render categories of links -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Integrations Manager -->
+                <section id="section-integrations" class="app-section">
+                    <div class="integrations-page">
+                        <div class="integrations-page-header">
+                            <div class="integrations-page-intro">
+                                <h2 data-i18n="integrations_page_title">Integrations</h2>
+                                <p class="muted-text" data-i18n="integrations_page_desc">Configure servers and APIs once — reuse in metric widgets.</p>
+                            </div>
+                            <div class="integrations-page-actions">
+                                <input type="search" id="integrations-search" class="form-control integrations-search" data-i18n="integrations_search_placeholder" placeholder="Search…">
+                                <button id="btn-add-integration" class="btn btn-primary" type="button">
+                                    <i data-lucide="plus"></i> <span data-i18n="integrations_add">Add integration</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="integrations-list" class="integrations-grid"></div>
+                    </div>
+                </section>
+                
+                <!-- 3. Settings View -->
+                <section id="section-settings" class="app-section">
+                    <nav class="admin-tab-nav settings-tab-nav" id="settings-tab-nav" data-i18n-aria-label="settings_tab_nav_label" aria-label="Settings">
+                        <button type="button" class="admin-tab active" data-settings-tab="appearance"><i data-lucide="palette"></i> <span data-i18n="settings_tab_appearance">Appearance</span></button>
+                        <button type="button" class="admin-tab" data-settings-tab="account"><i data-lucide="user-cog"></i> <span data-i18n="settings_tab_account">Account</span></button>
+                        <button type="button" class="admin-tab" data-settings-tab="notifications"><i data-lucide="bell"></i> <span data-i18n="settings_tab_notifications">Notifications</span></button>
+                        <button type="button" class="admin-tab" data-settings-tab="media"><i data-lucide="image"></i> <span data-i18n="settings_tab_media">Media</span></button>
+                        <button type="button" class="admin-tab" data-settings-tab="backup"><i data-lucide="archive"></i> <span data-i18n="settings_tab_backup">Backup</span></button>
+                    </nav>
+                    <div class="settings-tab-panels admin-tab-panels">
+                        <div class="admin-tab-panel active" data-settings-panel="appearance">
+                        <div class="settings-panel-inner">
+                        <div class="card glass">
+                            <div class="card-header">
+                                <i data-lucide="palette" class="card-header-icon"></i>
+                                <h3 data-i18n="settings_appearance">Erscheinungsbild</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="setting-item">
+                                    <label for="theme-select" data-i18n="theme_label">Farbschema</label>
+                                    <select id="theme-select" class="form-control">
+                                        <!-- Populated dynamically -->
+                                    </select>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="nav-position" data-i18n="nav_position_label">Menü-Position</label>
+                                    <select id="nav-position" class="form-control">
+                                        <option value="sidebar" data-i18n="nav_pos_sidebar">Seitenleiste (Links)</option>
+                                        <option value="topbar" data-i18n="nav_pos_topbar">Obere Menüleiste</option>
+                                    </select>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="wallpaper-select" data-i18n="wallpaper_label">Hintergrundbild</label>
+                                    <select id="wallpaper-select" class="form-control">
+                                        <option value="none" data-i18n="wallpaper_none">Standard (Farbe)</option>
+                                        <option value="library" data-i18n="wallpaper_library">Medien-Bibliothek</option>
+                                        <option value="custom" data-i18n="wallpaper_custom">Benutzerdefinierte Bild-URL</option>
+                                        <option value="upload" data-i18n="wallpaper_upload">Bild hochladen (lokal)</option>
+                                        <option value="unsplash_nature" data-i18n="wallpaper_unsplash_nature">Unsplash Natur (Zufall)</option>
+                                        <option value="unsplash_space" data-i18n="wallpaper_unsplash_space">Unsplash Weltall (Zufall)</option>
+                                        <option value="unsplash_abstract" data-i18n="wallpaper_unsplash_abstract">Unsplash Abstrakt (Zufall)</option>
+                                    </select>
+                                </div>
+                                <div class="setting-item hidden" id="wallpaper-library-group">
+                                    <label data-i18n="wallpaper_library_pick">Hintergrund aus Bibliothek</label>
+                                    <div id="wallpaper-library-picker"></div>
+                                    <small class="muted-text" data-i18n="wallpaper_library_hint">Eigene oder globale Hintergründe — Upload unter „Meine Medien“.</small>
+                                </div>
+                                <div class="setting-item hidden" id="wallpaper-url-group">
+                                    <label for="wallpaper-url-input" data-i18n="wallpaper_url_label">Hintergrundbild URL</label>
+                                    <input type="text" id="wallpaper-url-input" class="form-control" placeholder="https://...">
+                                </div>
+                                <div class="setting-item hidden" id="wallpaper-file-group">
+                                    <label for="wallpaper-file-input" data-i18n="wallpaper_upload_label">Bild hochladen</label>
+                                    <input type="file" id="wallpaper-file-input" class="form-control" accept="image/*">
+                                    <small class="muted-text" data-i18n="wallpaper_upload_hint">Wird lokal im Browser gespeichert.</small>
+                                </div>
+                                <div class="setting-item hidden" id="wallpaper-options-group">
+                                    <label for="wallpaper-opacity" data-i18n="wallpaper_opacity_label">Deckkraft (%)</label>
+                                    <input type="range" id="wallpaper-opacity" class="form-control" min="10" max="100" value="100">
+                                    <label for="wallpaper-size" style="margin-top:10px;display:block;" data-i18n="wallpaper_size_label">Darstellung</label>
+                                    <select id="wallpaper-size" class="form-control">
+                                        <option value="cover" data-i18n="wallpaper_size_cover_fill">Cover (füllen)</option>
+                                        <option value="contain" data-i18n="wallpaper_size_contain_full">Contain (ganzes Bild)</option>
+                                        <option value="auto" data-i18n="wallpaper_size_auto">Originalgröße</option>
+                                    </select>
+                                    <label for="wallpaper-position" style="margin-top:10px;display:block;" data-i18n="tab_bg_position_label">Position</label>
+                                    <select id="wallpaper-position" class="form-control">
+                                        <option value="center" data-i18n="wallpaper_position_center">Zentriert</option>
+                                        <option value="top" data-i18n="wallpaper_position_top">Oben</option>
+                                        <option value="bottom" data-i18n="wallpaper_position_bottom">Unten</option>
+                                    </select>
+                                    <label class="checkbox-label-container" style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;">
+                                        <input type="checkbox" id="wallpaper-fixed" checked>
+                                        <span data-i18n="wallpaper_fixed_scroll">Beim Scrollen fixieren</span>
+                                    </label>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="language-select" data-i18n="lang_label">Sprache</label>
+                                    <select id="language-select" class="form-control">
+                                        <option value="de-DE" data-i18n="lang_option_de">Deutsch (de-DE)</option>
+                                        <option value="en-US" data-i18n="lang_option_en">English (en-US)</option>
+                                    </select>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="number-decimal-separator" data-i18n="decimal_sep_label">Dezimaltrenner</label>
+                                    <select id="number-decimal-separator" class="form-control">
+                                        <option value="auto" data-i18n="number_sep_auto">Automatisch (aus Sprache)</option>
+                                        <option value="," data-i18n="number_sep_comma">Komma (,)</option>
+                                        <option value="." data-i18n="number_sep_dot">Punkt (.)</option>
+                                    </select>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="number-thousand-separator" data-i18n="thousand_sep_label">Tausendertrenner</label>
+                                    <select id="number-thousand-separator" class="form-control">
+                                        <option value="auto" data-i18n="number_sep_auto">Automatisch (aus Sprache)</option>
+                                        <option value="." data-i18n="number_sep_dot">Punkt (.)</option>
+                                        <option value="," data-i18n="number_sep_comma">Komma (,)</option>
+                                        <option value=" " data-i18n="number_sep_space">Leerzeichen</option>
+                                        <option value="none" data-i18n="thousand_sep_none">Keiner</option>
+                                    </select>
+                                </div>
+                                <div class="setting-item">
+                                    <label class="checkbox-label-container" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
+                                        <input type="checkbox" id="performance-mode" style="cursor:pointer;width:16px;height:16px;">
+                                        <span data-i18n="settings_performance_mode">Performance Mode (weniger Blur/Animationen)</span>
+                                    </label>
+                                    <small class="muted-text" data-i18n="settings_performance_mode_hint">Hilft bei Lags auf schwächerer GPU/Windows deutlich.</small>
+                                </div>
+                                <div id="custom-theme-panel" class="setting-item hidden">
+                                    <h4 style="margin:12px 0 8px;" data-i18n="custom_theme_title">Custom theme colors</h4>
+                                    <p class="muted-text" style="margin-bottom:12px;" data-i18n="custom_theme_desc">Saved per user when theme „Custom“ is selected.</p>
+                                    <div id="custom-theme-fields"></div>
+                                    <button type="button" id="btn-save-custom-theme" class="btn btn-outline" style="margin-top:12px;">
+                                        <i data-lucide="save"></i> <span data-i18n="custom_theme_save">Save colors</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                        </div>
+
+                        <div class="admin-tab-panel" data-settings-panel="account">
+                        <div class="settings-panel-inner">
+                        <div class="card glass">
+                            <div class="card-header">
+                                <i data-lucide="user-cog" class="card-header-icon"></i>
+                                <h3 data-i18n="settings_account">Benutzerkonto</h3>
+                            </div>
+                            <div class="card-body" id="settings-auth-status">
+                                <!-- Rendered dynamically based on auth -->
+                            </div>
+                        </div>
+                        </div>
+                        </div>
+
+                        <div class="admin-tab-panel" data-settings-panel="notifications">
+                        <div class="settings-panel-inner">
+                        <div class="card glass hidden" id="user-notifications-guest">
+                            <div class="card-body">
+                                <p class="muted-text" data-i18n="user_notifications_login_hint">Sign in to configure notification channels.</p>
+                                <button type="button" id="btn-notifications-login" class="btn btn-primary" style="margin-top:12px;">
+                                    <i data-lucide="log-in"></i>
+                                    <span data-i18n="btn_login">Log In</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card glass hidden" id="user-notifications-card">
+                            <div class="card-header">
+                                <i data-lucide="bell" class="card-header-icon"></i>
+                                <h3 data-i18n="user_notifications_title">Notifications</h3>
+                            </div>
+                            <div class="card-body" id="user-notifications-body">
+                                <p class="muted-text" style="margin-bottom:12px;" data-i18n="user_notifications_desc">Webhooks for personal alerts.</p>
+                                <div class="user-notify-grid">
+                                    <div class="setting-item"><label data-i18n="user_notify_discord">Discord</label><div class="admin-inline-actions"><input type="url" class="form-control user-notify-input" data-notify-channel="discord" data-notify-field="url" placeholder="https://discord.com/api/webhooks/…"><button type="button" class="btn btn-outline btn-sm user-notify-test" data-channel="discord"><span data-i18n="admin_notify_test">Test</span></button></div></div>
+                                    <div class="setting-item"><label data-i18n="user_notify_teams">Teams</label><div class="admin-inline-actions"><input type="url" class="form-control user-notify-input" data-notify-channel="teams" data-notify-field="url" placeholder="Webhook URL"><button type="button" class="btn btn-outline btn-sm user-notify-test" data-channel="teams"><span data-i18n="admin_notify_test">Test</span></button></div></div>
+                                    <div class="setting-item"><label data-i18n="user_notify_telegram">Telegram</label><div class="admin-inline-actions"><input type="text" class="form-control user-notify-input" data-notify-channel="telegram" data-notify-field="url" placeholder="bot_token|chat_id"><button type="button" class="btn btn-outline btn-sm user-notify-test" data-channel="telegram"><span data-i18n="admin_notify_test">Test</span></button></div></div>
+                                    <div class="setting-item"><label data-i18n="user_notify_ntfy">ntfy</label><div class="admin-inline-actions"><input type="url" class="form-control user-notify-input" data-notify-channel="ntfy" data-notify-field="url" placeholder="https://ntfy.sh/topic"><button type="button" class="btn btn-outline btn-sm user-notify-test" data-channel="ntfy"><span data-i18n="admin_notify_test">Test</span></button></div></div>
+                                    <div class="setting-item"><label data-i18n="user_notify_pushover">Pushover</label><div class="admin-inline-actions"><input type="text" class="form-control user-notify-input" data-notify-channel="pushover" data-notify-field="url" placeholder="user_key|api_token"><button type="button" class="btn btn-outline btn-sm user-notify-test" data-channel="pushover"><span data-i18n="admin_notify_test">Test</span></button></div></div>
+                                </div>
+                                <button type="button" id="btn-save-user-notifications" class="btn btn-primary" style="margin-top:12px;"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+                            </div>
+                        </div>
+                        </div>
+                        </div>
+
+                        <div class="admin-tab-panel" data-settings-panel="media">
+                        <div class="settings-panel-inner">
+                        <div class="card glass" id="user-media-card">
+                            <div class="card-header">
+                                <i data-lucide="image" class="card-header-icon"></i>
+                                <h3 data-i18n="settings_user_media_title">My media</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="muted-text" style="margin-bottom: 12px;" data-i18n="settings_user_media_desc">Icons and backgrounds for favorites and dashboard.</p>
+                                <div id="user-media-manager"></div>
+                            </div>
+                        </div>
+                        </div>
+                        </div>
+
+                        <div class="admin-tab-panel" data-settings-panel="backup">
+                        <div class="settings-panel-inner">
+                        <div class="card glass" id="backup-restore-card">
+                            <div class="card-header">
+                                <i data-lucide="archive" class="card-header-icon"></i>
+                                <h3 data-i18n="settings_backup_title">Layout backup</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="muted-text" style="margin-bottom: 16px;" data-i18n="settings_backup_desc">Export or restore tabs, widgets and bookmarks as JSON.</p>
+                                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                    <button id="btn-export-layout" class="btn btn-outline" type="button">
+                                        <i data-lucide="download"></i> <span data-i18n="settings_backup_export">Export layout</span>
+                                    </button>
+                                    <button id="btn-import-trigger" class="btn btn-primary" type="button">
+                                        <i data-lucide="upload"></i> <span data-i18n="settings_backup_import">Import backup</span>
+                                    </button>
+                                    <input type="file" id="import-file-input" style="display: none;" accept=".json">
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 4. Admin Panel View -->
+                <section id="section-admin" class="app-section">
+                    <div id="admin-maintenance-banner" class="admin-maintenance-banner hidden" role="status">
+                        <i data-lucide="alert-triangle"></i>
+                        <span data-i18n="admin_maintenance_banner">Maintenance mode active</span>
+                    </div>
+
+                    <div class="admin-health-card glass" id="admin-health-card">
+                        <div class="admin-health-header">
+                            <div class="admin-health-title">
+                                <i data-lucide="activity"></i>
+                                <h3 data-i18n="admin_health_title">System Health</h3>
+                                <span class="admin-health-overall" id="admin-health-overall" data-status="ok">OK</span>
+                            </div>
+                            <button type="button" id="btn-admin-health-refresh" class="btn btn-outline btn-sm" data-i18n-title="admin_health_refresh" title="Refresh">
+                                <i data-lucide="refresh-cw"></i>
+                            </button>
+                        </div>
+                        <div class="admin-health-grid" id="admin-health-grid">
+                            <div class="admin-health-loading muted-text" data-i18n="admin_health_loading">Loading system health…</div>
+                        </div>
+                        <div class="admin-health-footer muted-text" id="admin-health-footer"></div>
+                    </div>
+
+                    <nav class="admin-tab-nav" id="admin-tab-nav" data-i18n-aria-label="admin_tab_nav_label" aria-label="Administration">
+                        <button type="button" class="admin-tab active" data-admin-tab="system"><i data-lucide="monitor"></i> <span data-i18n="admin_tab_system">System</span></button>
+                        <button type="button" class="admin-tab" data-admin-tab="users"><i data-lucide="users"></i> <span data-i18n="admin_tab_users">Users</span></button>
+                        <button type="button" class="admin-tab" data-admin-tab="auth"><i data-lucide="key-round"></i> <span data-i18n="admin_tab_auth">Auth</span></button>
+                        <button type="button" class="admin-tab" data-admin-tab="api"><i data-lucide="plug"></i> <span data-i18n="admin_tab_api">API</span></button>
+                        <button type="button" class="admin-tab" data-admin-tab="notify"><i data-lucide="mail"></i> <span data-i18n="admin_tab_smtp">SMTP</span></button>
+                        <button type="button" class="admin-tab" data-admin-tab="security"><i data-lucide="shield"></i> <span data-i18n="admin_tab_security">Security</span></button>
+                        <button type="button" class="admin-tab" data-admin-tab="audit"><i data-lucide="scroll-text"></i> <span data-i18n="admin_tab_audit">Audit</span></button>
+                        <button type="button" class="admin-tab" data-admin-tab="services"><i data-lucide="cpu"></i> <span data-i18n="admin_tab_services">Services</span></button>
+                        <button type="button" class="admin-tab" data-admin-tab="backup"><i data-lucide="archive"></i> <span data-i18n="admin_tab_backup">Backup</span></button>
+                        <button type="button" class="admin-tab" data-admin-tab="modules"><i data-lucide="layers"></i> <span data-i18n="admin_tab_modules">Modules</span></button>
+                        <button type="button" class="admin-tab" data-admin-tab="media"><i data-lucide="folder-up"></i> <span data-i18n="admin_tab_media">Media</span></button>
+                    </nav>
+
+                    <div class="admin-stats-grid" id="admin-stats-grid">
+                        <div class="admin-stat-card glass">
+                            <i data-lucide="users"></i>
+                            <div class="admin-stat-value" id="admin-stat-users">—</div>
+                            <div class="admin-stat-label" data-i18n="admin_stat_users">Users</div>
+                        </div>
+                        <div class="admin-stat-card glass">
+                            <i data-lucide="layout-grid"></i>
+                            <div class="admin-stat-value" id="admin-stat-widgets">—</div>
+                            <div class="admin-stat-label" data-i18n="admin_stat_widgets">Widgets</div>
+                        </div>
+                        <div class="admin-stat-card glass">
+                            <i data-lucide="plug"></i>
+                            <div class="admin-stat-value" id="admin-stat-integrations">—</div>
+                            <div class="admin-stat-label" data-i18n="admin_stat_integrations">Integrations</div>
+                        </div>
+                        <div class="admin-stat-card glass">
+                            <i data-lucide="layers"></i>
+                            <div class="admin-stat-value" id="admin-stat-modules">—</div>
+                            <div class="admin-stat-label" data-i18n="admin_stat_modules">Modules active</div>
+                        </div>
+                        <div class="admin-stat-card glass">
+                            <i data-lucide="database"></i>
+                            <div class="admin-stat-value" id="admin-stat-cache">—</div>
+                            <div class="admin-stat-label" data-i18n="admin_stat_cache">Widget cache</div>
+                        </div>
+                    </div>
+
+                    <div class="admin-tab-panels" id="admin-tab-panels">
+                        {% include 'admin_panels.html' %}
+                    </div>
+                    <div id="admin-custom-settings" class="settings-grid" style="margin-top: 24px;"></div>
+                </section>
+                
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals & Overlay Containers -->
+
+    <!-- Widget Settings Modal -->
+    <div id="widget-config-modal" class="modal-overlay">
+        <div class="modal-card glass">
+            <form id="widget-config-form">
+                <div class="modal-header">
+                    <h3 id="widget-config-title">Widget konfigurieren</h3>
+                    <button type="button" class="icon-btn btn-close-modal"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="widget-title-input" data-i18n="widget_title_label">Widget Titel</label>
+                        <input type="text" id="widget-title-input" class="form-control">
+                    </div>
+                    <div id="widget-custom-fields">
+                        <!-- Injected schema specific fields -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btn-delete-widget-modal" class="btn btn-danger mr-auto">
+                        <i data-lucide="trash-2"></i>
+                        <span data-i18n="btn_delete">Löschen</span>
+                    </button>
+                    <button type="button" class="btn btn-outline btn-close-modal" data-i18n="btn_cancel">Abbrechen</button>
+                    <button type="submit" id="btn-save-widget-config" class="btn btn-success" data-i18n="btn_save">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Widget Slide-out Panel -->
+    <div id="add-widget-panel" class="panel-overlay">
+        <div class="panel-card glass">
+            <div class="panel-header">
+                <h3 data-i18n="panel_add_widget_title">Widgets hinzufügen</h3>
+                <button id="btn-close-widget-panel" class="icon-btn"><i data-lucide="x"></i></button>
+            </div>
+            <div class="panel-body">
+                <div class="add-widget-sticky">
+                    <div class="widget-source-tabs">
+                        <button class="widget-source-btn active" id="widget-source-default" data-source="default" type="button" data-i18n="widget_source_default">
+                            <span data-i18n="widget_source_default">Standard</span>
+                        </button>
+                        <button class="widget-source-btn" id="widget-source-integrations" data-source="integrations" type="button">
+                            <span data-i18n="widget_source_integrations">Integrationen</span>
+                        </button>
+                    </div>
+                    <!-- Search bar -->
+                    <div class="form-group" id="widget-default-search-group" style="margin-bottom: 10px;">
+                        <input type="text" id="widget-search-input" class="form-control" data-i18n-placeholder="widget_search_placeholder" placeholder="Widget suchen..." autocomplete="off">
+                    </div>
+                    <!-- Categories Pills -->
+                    <div class="widget-categories-filter" id="widget-default-categories">
+                        <button class="widget-category-btn active" data-category="all">
+                            <i data-lucide="layout-grid" style="width:14px; height:14px;"></i> <span data-i18n="widget_cat_all">Alle</span>
+                        </button>
+                        <button class="widget-category-btn" data-category="system">
+                            <i data-lucide="server" style="width:14px; height:14px;"></i> <span data-i18n="widget_cat_system">System</span>
+                        </button>
+                        <button class="widget-category-btn" data-category="media">
+                            <i data-lucide="film" style="width:14px; height:14px;"></i> <span data-i18n="widget_cat_media">Medien</span>
+                        </button>
+                        <button class="widget-category-btn" data-category="smarthome">
+                            <i data-lucide="home" style="width:14px; height:14px;"></i> <span data-i18n="widget_cat_smarthome">Smart Home</span>
+                        </button>
+                        <button class="widget-category-btn" data-category="utility">
+                            <i data-lucide="wrench" style="width:14px; height:14px;"></i> <span data-i18n="widget_cat_utility">Werkzeuge</span>
+                        </button>
+                    </div>
+                    <div id="integration-widget-builder" class="integration-widget-builder hidden"></div>
+                </div>
+                <div id="widgets-list" class="widgets-list">
+                    <!-- Loaded dynamically from api -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password reset modal -->
+    <div id="password-reset-modal" class="modal-overlay">
+        <div class="modal-card glass">
+            <form id="password-reset-form">
+                <div class="modal-header">
+                    <h3 data-i18n="password_reset_title">Passwort zurücksetzen</h3>
+                    <button type="button" class="icon-btn btn-close-pwd-reset"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <p class="muted-text" style="margin-bottom:12px;" data-i18n="password_reset_desc">Gib Benutzername oder E-Mail ein. Du erhältst einen 6-stelligen Code per E-Mail (SMTP muss im Admin konfiguriert sein).</p>
+                    <div class="form-group">
+                        <label for="pwd-reset-identifier" data-i18n="password_reset_identifier">Benutzername oder E-Mail</label>
+                        <input type="text" id="pwd-reset-identifier" class="form-control" required autocomplete="username">
+                    </div>
+                    <div class="form-group hidden" id="pwd-reset-code-group">
+                        <label for="pwd-reset-code" data-i18n="password_reset_code">6-stelliger Code</label>
+                        <input type="text" id="pwd-reset-code" class="form-control" inputmode="numeric" maxlength="6" pattern="[0-9]{6}">
+                    </div>
+                    <div class="form-group hidden" id="pwd-reset-new-group">
+                        <label for="pwd-reset-new" data-i18n="password_reset_new">Neues Passwort</label>
+                        <input type="password" id="pwd-reset-new" class="form-control" autocomplete="new-password">
+                    </div>
+                    <div id="pwd-reset-message" class="alert hidden"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline btn-close-pwd-reset" data-i18n="btn_cancel">Abbrechen</button>
+                    <button type="submit" id="btn-pwd-reset-submit" class="btn btn-primary" data-i18n="password_reset_submit">Weiter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Login/Register Modal -->
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-card glass">
+            <form id="auth-form">
+                <div class="modal-header">
+                    <h3 id="auth-modal-title" data-i18n="auth_login_title">Anmelden</h3>
+                    <button type="button" class="icon-btn btn-close-modal"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="auth-username" data-i18n="auth_username">Benutzername</label>
+                        <input type="text" id="auth-username" class="form-control" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="auth-password" data-i18n="auth_password">Passwort</label>
+                        <input type="password" id="auth-password" class="form-control" required autocomplete="current-password">
+                    </div>
+                    <div class="form-group hidden" id="auth-mfa-group">
+                        <label for="auth-mfa-code" data-i18n="auth_mfa_code">MFA code</label>
+                        <input type="text" id="auth-mfa-code" class="form-control" inputmode="numeric" autocomplete="one-time-code" maxlength="8" data-i18n="auth_mfa_hint">
+                    </div>
+                    <div id="auth-oidc-hint" class="muted-text hidden" style="font-size:0.8rem;margin-top:8px;">
+                        <a href="/api/auth/oidc/login" data-i18n="auth_oidc_login">Sign in with OIDC</a>
+                    </div>
+                    <div id="auth-message" class="alert hidden"></div>
+                    <p class="muted-text" style="margin-top:8px;font-size:0.85rem;">
+                        <button type="button" id="btn-forgot-password" class="btn btn-link" style="padding:0;" data-i18n="auth_forgot_password">Passwort vergessen?</button>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btn-auth-toggle" class="btn btn-link" data-i18n="auth_toggle_register">Registrieren</button>
+                    <button type="button" class="btn btn-outline btn-close-modal" data-i18n="btn_cancel">Abbrechen</button>
+                    <button type="submit" id="btn-auth-submit" class="btn btn-primary" data-i18n="btn_login">Anmelden</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add/Edit Favorite Link Modal -->
+    <div id="fav-modal" class="modal-overlay">
+        <div class="modal-card glass">
+            <form id="fav-form">
+                <div class="modal-header">
+                    <h3 id="fav-modal-title">Favorit hinzufügen</h3>
+                    <button type="button" class="icon-btn btn-close-modal"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="fav-id-input">
+                    <div class="form-group">
+                        <label for="fav-title-input" data-i18n="fav_title">Titel</label>
+                        <input type="text" id="fav-title-input" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="fav-url-input" data-i18n="fav_url">URL</label>
+                        <input type="url" id="fav-url-input" class="form-control" placeholder="https://" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="fav-category-select" data-i18n="fav_category">Kategorie</label>
+                        <select id="fav-category-select" class="form-control">
+                            <option value="" data-i18n="fav_category_none">— (ohne Kategorie)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fav-icon-type">Icon</label>
+                        <select id="fav-icon-type" class="form-control">
+                            <option value="auto">Automatisch (Favicon der Seite)</option>
+                            <option value="icon">Lucide Icon</option>
+                            <option value="asset" data-i18n="fav_icon_asset">Aus Medien-Bibliothek</option>
+                            <option value="image">Bild-URL</option>
+                        </select>
+                    </div>
+                    <div class="form-group hidden" id="fav-icon-lucide-group">
+                        <label for="fav-icon-val">Lucide Icon-Name</label>
+                        <input type="text" id="fav-icon-val" class="form-control" placeholder="link, star, home …">
+                    </div>
+                    <div class="form-group hidden" id="fav-icon-url-group">
+                        <label for="fav-icon-url">Bild-URL</label>
+                        <input type="url" id="fav-icon-url" class="form-control" placeholder="https://...">
+                    </div>
+                    <div class="form-group hidden" id="fav-icon-asset-group">
+                        <label>Icon aus Bibliothek</label>
+                        <input type="hidden" id="fav-icon-asset-id">
+                        <div id="fav-icon-asset-picker"></div>
+                    </div>
+                    <div class="fav-icon-preview-wrap" id="fav-icon-preview-wrap">
+                        <label>Vorschau</label>
+                        <div id="fav-icon-preview" class="fav-icon-preview"></div>
+                    </div>
+                    <div class="form-group" id="fav-private-group" style="margin-top: 12px;">
+                        <label class="checkbox-label-container" style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="fav-private-input" style="cursor: pointer; width: 16px; height: 16px;">
+                            <span data-i18n="fav_private">Privat (nur für mich sichtbar)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btn-delete-fav" class="btn btn-danger mr-auto hidden">
+                        <i data-lucide="trash-2"></i>
+                        <span data-i18n="btn_delete">Löschen</span>
+                    </button>
+                    <button type="button" class="btn btn-outline btn-close-modal" data-i18n="btn_cancel">Abbrechen</button>
+                    <button type="submit" id="btn-save-fav" class="btn btn-success" data-i18n="btn_save">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="fav-category-sort-modal" class="modal-overlay">
+        <div class="modal-card glass">
+            <div class="modal-header">
+                <h3 data-i18n="fav_sort_categories_title">Kategorien sortieren</h3>
+                <button type="button" class="icon-btn btn-close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="muted-text" data-i18n="fav_sort_categories_hint">Reihenfolge per Drag &amp; Drop oder mit den Pfeilen anpassen.</p>
+                <ul id="fav-category-sort-list" class="fav-category-sort-list"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline btn-close-modal" data-i18n="btn_cancel">Abbrechen</button>
+                <button type="button" id="btn-save-category-order" class="btn btn-success" data-i18n="fav_sort_save">Reihenfolge speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Groups Modal -->
+    <div id="admin-groups-modal" class="modal-overlay">
+        <div class="modal-card glass modal-card-wide">
+            <div class="modal-header">
+                <h3 data-i18n="admin_groups_modal_title">Groups</h3>
+                <button type="button" class="icon-btn btn-close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="admin-inline-actions" style="margin-bottom:12px;">
+                    <input type="text" id="admin-new-group-name" class="form-control" data-i18n="admin_group_new" style="max-width:200px;">
+                    <button type="button" id="btn-admin-create-group" class="btn btn-primary btn-sm" data-i18n="admin_group_create">Create</button>
+                </div>
+                <table class="custom-json-table" id="admin-groups-table">
+                    <thead><tr><th data-i18n="admin_group_col_name">Name</th><th data-i18n="admin_group_col_role">Role</th><th data-i18n="admin_group_col_members">Members</th><th></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Users List Modal -->
+    <div id="admin-users-mgmt-modal" class="modal-overlay">
+        <div class="modal-card glass modal-card-wide">
+            <div class="modal-header">
+                <h3 data-i18n="admin_users_modal_title">User management</h3>
+                <div class="modal-header-actions">
+                    <button type="button" id="btn-admin-add-user" class="btn btn-primary btn-sm">
+                        <i data-lucide="plus"></i> <span data-i18n="admin_user_add">Add user</span>
+                    </button>
+                    <button type="button" class="icon-btn btn-close-modal"><i data-lucide="x"></i></button>
+                </div>
+            </div>
+            <div class="modal-body modal-body-table">
+                <table class="custom-json-table" id="admin-users-table">
+                    <thead>
+                        <tr>
+                            <th style="width:48px;"></th>
+                            <th data-i18n="admin_user_col_name">Username</th>
+                            <th data-i18n="admin_user_col_role">Role</th>
+                            <th style="width: 140px; text-align: right;" data-i18n="admin_user_col_actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Audit Log Modal -->
+    <div id="admin-audit-modal" class="modal-overlay">
+        <div class="modal-card glass modal-card-wide">
+            <div class="modal-header">
+                <h3 data-i18n="admin_audit_modal_title">Activity log</h3>
+                <button type="button" class="icon-btn btn-close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="admin-audit-filters">
+                    <div class="form-group">
+                        <label for="admin-audit-filter-user" data-i18n="admin_audit_filter_user">User</label>
+                        <select id="admin-audit-filter-user" class="form-control">
+                            <option value="__all__" data-i18n="admin_audit_all_users">All users</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-audit-filter-category" data-i18n="admin_audit_filter_category">Category</label>
+                        <select id="admin-audit-filter-category" class="form-control">
+                            <option value="__all__" data-i18n="admin_audit_all_categories">All categories</option>
+                            <option value="login" data-i18n="admin_audit_cat_login">Login / logout</option>
+                            <option value="user" data-i18n="admin_audit_cat_user">Users</option>
+                            <option value="config" data-i18n="admin_audit_cat_config">Configuration</option>
+                            <option value="api" data-i18n="admin_audit_cat_api">API / cache</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-audit-filter-event" data-i18n="admin_audit_filter_action">Action</label>
+                        <select id="admin-audit-filter-event" class="form-control">
+                            <option value="__all__" data-i18n="admin_audit_all_actions">All actions</option>
+                        </select>
+                    </div>
+                    <button type="button" id="btn-admin-audit-refresh" class="btn btn-secondary">
+                        <i data-lucide="refresh-cw"></i> <span data-i18n="btn_refresh">Refresh</span>
+                    </button>
+                </div>
+                <div class="admin-audit-table-wrap">
+                    <table class="custom-json-table" id="admin-audit-logs-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 180px;" data-i18n="admin_audit_col_time">Timestamp</th>
+                                <th style="width: 130px;" data-i18n="admin_audit_col_user">User</th>
+                                <th style="width: 140px;" data-i18n="admin_audit_col_action">Action</th>
+                                <th data-i18n="admin_audit_col_msg">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-audit-logs-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Add/Edit User Modal -->
+    <div id="admin-user-modal" class="modal-overlay">
+        <div class="modal-card glass">
+            <form id="admin-user-form">
+                <div class="modal-header">
+                    <h3 id="admin-user-modal-title" data-i18n="admin_user_add">Add user</h3>
+                    <button type="button" class="icon-btn btn-close-modal"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="admin-user-id-input">
+                    <div class="form-group">
+                        <label for="admin-user-username" data-i18n="admin_user_col_name">Username</label>
+                        <input type="text" id="admin-user-username" class="form-control" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-user-password" id="admin-user-password-label" data-i18n="auth_password">Password</label>
+                        <input type="password" id="admin-user-password" class="form-control" autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-user-role" data-i18n="admin_user_col_role">Role</label>
+                        <select id="admin-user-role" class="form-control">
+                            <option value="user" data-i18n="role_user_short">User</option>
+                            <option value="admin" data-i18n="role_admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="admin-checkbox-row">
+                            <input type="checkbox" id="admin-user-locked">
+                            <span data-i18n="admin_user_locked">Account locked</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline btn-close-modal" data-i18n="btn_cancel">Cancel</button>
+                    <button type="submit" class="btn btn-success" data-i18n="btn_save">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Asset Detail / Edit Modal -->
+    <div id="asset-detail-modal" class="modal-overlay">
+        <div class="modal-card glass">
+            <div class="modal-header">
+                <h3 id="asset-detail-title">Medium bearbeiten</h3>
+                <button type="button" class="icon-btn btn-close-asset-detail"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="asset-detail-preview" class="asset-detail-preview"></div>
+                <div class="form-group">
+                    <label for="asset-detail-name">Name</label>
+                    <input type="text" id="asset-detail-name" class="form-control" maxlength="255">
+                </div>
+                <div class="form-group hidden" id="asset-detail-global-group">
+                    <label class="checkbox-label-container" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" id="asset-detail-global">
+                        <span>Für alle nutzbar (global)</span>
+                    </label>
+                </div>
+                <div id="asset-detail-meta" class="muted-text" style="font-size:0.8rem;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="asset-detail-delete" class="btn btn-danger mr-auto" data-i18n="btn_delete">Löschen</button>
+                <button type="button" class="btn btn-outline btn-close-asset-detail" data-i18n="btn_cancel">Abbrechen</button>
+                <button type="button" id="asset-detail-save" class="btn btn-primary" data-i18n="btn_save">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Duplicate Modal -->
+    <div id="tab-duplicate-modal" class="modal-overlay">
+        <div class="modal-card glass">
+            <div class="modal-header">
+                <h3 id="tab-duplicate-title">Duplicate tab</h3>
+                <button type="button" class="icon-btn btn-close-tab-dup"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="tab-dup-name" data-i18n="tab_dup_name_label">Tab name</label>
+                    <input type="text" id="tab-dup-name" class="form-control" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="tab-dup-source-layout" data-i18n="tab_dup_source_layout_label">Copy from dashboard</label>
+                    <select id="tab-dup-source-layout" class="form-control">
+                        <option value="auto" data-i18n="tab_dup_source_desktop">Desktop dashboard</option>
+                        <option value="mobile" data-i18n="tab_dup_source_mobile">Mobile dashboard</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tab-dup-source-tab" data-i18n="tab_dup_source_tab_label">Source tab</label>
+                    <select id="tab-dup-source-tab" class="form-control"></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline btn-close-tab-dup" data-i18n="btn_cancel">Cancel</button>
+                <button type="button" id="tab-dup-save" class="btn btn-primary" data-i18n="tab_dup_confirm">Duplicate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Background Modal (Layout Edit) -->
+    <div id="tab-background-modal" class="modal-overlay">
+        <div class="modal-card glass">
+            <div class="modal-header">
+                <h3 id="tab-background-title" data-i18n="tab_bg_title">Tab-Hintergrund</h3>
+                <button type="button" class="icon-btn btn-close-tab-bg"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="tab-background-tab-id">
+                <div class="form-group">
+                    <label for="tab-bg-name" data-i18n="tab_edit_name_label">Tab name</label>
+                    <input type="text" id="tab-bg-name" class="form-control" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="tab-bg-type" data-i18n="tab_edit_bg_label">Background</label>
+                    <select id="tab-bg-type" class="form-control">
+                        <option value="none" data-i18n="tab_bg_none">Keiner (Standard)</option>
+                        <option value="asset" data-i18n="tab_bg_asset">Aus Medien-Bibliothek</option>
+                    </select>
+                </div>
+                <div class="form-group hidden" id="tab-bg-picker-group">
+                    <label data-i18n="tab_bg_pick_label">Bild wählen</label>
+                    <input type="hidden" id="tab-bg-asset-id">
+                    <div id="tab-bg-asset-picker"></div>
+                </div>
+                <div class="form-group hidden" id="tab-bg-options-group">
+                    <label for="tab-bg-opacity" data-i18n="tab_bg_opacity_label">Deckkraft (%)</label>
+                    <input type="range" id="tab-bg-opacity" class="form-control" min="10" max="100" value="100">
+                    <label for="tab-bg-size" style="margin-top:10px;display:block;" data-i18n="tab_bg_size_label">Darstellung</label>
+                    <select id="tab-bg-size" class="form-control">
+                        <option value="cover" data-i18n="tab_bg_size_cover">Cover</option>
+                        <option value="contain" data-i18n="tab_bg_size_contain">Contain</option>
+                        <option value="auto" data-i18n="tab_bg_size_auto">Original</option>
+                    </select>
+                    <label for="tab-bg-position" style="margin-top:10px;display:block;" data-i18n="tab_bg_position_label">Position</label>
+                    <select id="tab-bg-position" class="form-control">
+                        <option value="center" data-i18n="wallpaper_position_center">Zentriert</option>
+                        <option value="top" data-i18n="wallpaper_position_top">Oben</option>
+                        <option value="bottom" data-i18n="wallpaper_position_bottom">Unten</option>
+                    </select>
+                </div>
+                <div id="tab-bg-preview" class="tab-bg-preview hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline btn-close-tab-bg" data-i18n="btn_cancel">Abbrechen</button>
+                <button type="button" id="tab-bg-save" class="btn btn-primary" data-i18n="btn_save">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Setup / Init Modal (First Start) -->
+    <div id="setup-modal" class="modal-overlay" data-no-backdrop-close="true">
+        <div class="modal-card glass">
+            <form id="setup-form">
+                <div class="modal-header">
+                    <h3 data-i18n="setup_modal_title">Ersteinrichtung (Admin-Konto anlegen)</h3>
+                </div>
+                <div class="modal-body">
+                    <p class="muted-text" style="margin-bottom: 20px;" data-i18n="setup_modal_desc">Erstelle das erste Administrator-Konto, um das Dashboard einzurichten und anzupassen.</p>
+                    <div class="form-group">
+                        <label for="setup-username" data-i18n="auth_username">Benutzername</label>
+                        <input type="text" id="setup-username" class="form-control" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="setup-password" data-i18n="auth_password">Passwort</label>
+                        <input type="password" id="setup-password" class="form-control" required autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="setup-confirm-password" data-i18n="setup_confirm_password">Passwort bestätigen</label>
+                        <input type="password" id="setup-confirm-password" class="form-control" required autocomplete="new-password">
+                    </div>
+                    <div id="setup-message" class="alert hidden"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" id="btn-setup-submit" class="btn btn-primary btn-full" data-i18n="setup_submit_btn">Admin-Konto erstellen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Global Search Launcher Modal -->
+    <div id="search-launcher-modal" class="modal-overlay search-launcher-overlay">
+        <div class="search-launcher-card glass">
+            <div class="search-launcher-header">
+                <i data-lucide="search" class="search-icon"></i>
+                <input type="text" id="search-launcher-input" data-i18n-placeholder="search_launcher_placeholder" placeholder="Suche nach Widgets, Lesezeichen oder Web..." autocomplete="off">
+                <button type="button" id="btn-close-search" class="icon-btn"><i data-lucide="x"></i></button>
+            </div>
+            <div id="search-launcher-results" class="search-launcher-results">
+                <!-- Injected dynamically -->
+            </div>
+            <div class="search-launcher-footer">
+                <span><kbd>↑↓</kbd> Navigieren</span>
+                <span><kbd>Enter</kbd> Öffnen</span>
+                <span><kbd>Esc</kbd> Schließen</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modern Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Core App Logic -->
+    <script src="/static/js/translations.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/api_cache.js"></script>
+    <script src="/static/js/perf.js"></script>
+    <script src="/static/js/widget_refresh.js"></script>
+    <script src="/static/js/widget_config_fields.js"></script>
+    <script src="/static/js/widget_data_source.js"></script>
+    <script src="/static/js/widget_appearance.js"></script>
+    <script src="/static/js/chart_widgets.js"></script>
+    <script src="/static/js/integration_field_help.js"></script>
+    <script src="/static/js/discord_widget.js"></script>
+    <script src="/static/js/integrations.js"></script>
+    <script src="/static/js/integration_widget_helpers.js"></script>
+    <script src="/static/js/app_dialog.js"></script>
+    <script src="/static/js/modal_util.js"></script>
+    <script src="/static/js/asset_library.js"></script>
+    <script src="/static/js/admin_panel.js"></script>
+    <script src="/static/js/settings_panel.js"></script>
+    <script src="/static/js/toggle_switch.js"></script>
+    <script src="/static/js/avatar_crop.js"></script>
+    <script src="/static/js/user_profile.js"></script>
+    <script src="/static/js/sidebar_ui.js"></script>
+    <script src="/static/js/core.js"></script>
+    <script src="/static/js/grid.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

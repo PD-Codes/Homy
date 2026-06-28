@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging / build (Hatchling)
+build/
+dist/
+homy.egg-info/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# All AI Rules for End Checks (like Security Checks) will be not included in Sync
+.cursor/*
+.claude/*
+
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env / local config
+.env
+.env.*
+
+# Runtime data / local databases
+homy.db
+dashboard.db
+*.db
+data/
+uploads/
+instance/
+
+# Logs
+*.log
+logs/
+
+# AI Security Checks
+.claude/

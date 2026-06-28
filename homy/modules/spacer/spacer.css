@@ -1,0 +1,39 @@
+/* Spacer Widget Styling */
+
+/* Normal Mode: completely invisible empty gap */
+.widget.widget-spacer {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.widget.widget-spacer .widget-header,
+.widget.widget-spacer .widget-resize-handle {
+    display: none !important;
+}
+
+/* Edit Mode: visible, dashed outline card for dragging/resizing */
+.dashboard-grid.editing .widget.widget-spacer {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 2px dashed rgba(255, 255, 255, 0.15) !important;
+    box-shadow: var(--shadow-sm) !important;
+    backdrop-filter: var(--backdrop-blur) !important;
+    -webkit-backdrop-filter: var(--backdrop-blur) !important;
+    cursor: grab;
+}
+
+.dashboard-grid.editing .widget.widget-spacer .widget-header {
+    display: flex !important;
+    background: rgba(255, 255, 255, 0.01);
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-grid.editing .widget.widget-spacer .widget-title {
+    color: var(--text-muted);
+}
+
+.dashboard-grid.editing .widget.widget-spacer .widget-resize-handle {
+    display: block !important;
+}

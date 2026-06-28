@@ -1,0 +1,12 @@
+.iw-card { display:flex; flex-direction:column; gap:10px; height:100%; }
+.iw-metrics { display:flex; gap:12px; flex-wrap:wrap; }
+.iw-metric { display:flex; flex-direction:column; gap:2px; }
+.iw-metric .label { font-size:0.72rem; color:var(--text-muted); }
+.iw-metric .val { font-size:1.1rem; font-weight:700; }
+.iw-list { display:flex; flex-direction:column; gap:6px; overflow-y:auto; max-height:100%; }
+.iw-row { padding:6px 8px; border-radius:6px; background:rgba(255,255,255,0.03); border-left:3px solid var(--border-color); font-size:0.8rem; }
+.iw-row.up, .iw-row.running { border-left-color: var(--success); }
+.iw-row.down, .iw-row.stopped { border-left-color: var(--danger); }
+.iw-row-title { font-weight:600; }
+.iw-row-meta { font-size:0.72rem; color:var(--text-muted); }
+.iw-empty { text-align:center; color:var(--text-muted); padding:16px; font-size:0.85rem; }

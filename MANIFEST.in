@@ -1,0 +1,6 @@
+recursive-include homy/templates *
+recursive-include homy/static *
+recursive-include homy/modules *
+recursive-include homy/integrations *
+recursive-include homy/themes *
+recursive-include homy/lang *

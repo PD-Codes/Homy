@@ -1,0 +1,28 @@
+:root {
+    --bg-base: #0b0f19;
+    --bg-surface: rgba(17, 24, 39, 0.75);
+    --bg-card: rgba(31, 41, 55, 0.45);
+    --bg-card-rgb: 31, 41, 55;
+    --bg-card-solid: rgb(31, 41, 55);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-glow: rgba(99, 102, 241, 0.2);
+
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --text-muted: #6b7280;
+
+    --primary: #818cf8;
+    --primary-hover: #6366f1;
+    --primary-glow: rgba(129, 140, 248, 0.35);
+
+    --success: #34d399;
+    --success-hover: #10b981;
+    --danger: #f87171;
+    --danger-hover: #ef4444;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+}

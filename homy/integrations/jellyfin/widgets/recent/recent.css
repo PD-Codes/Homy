@@ -1,0 +1,13 @@
+.jf-recent-container { display:flex; flex-direction:column; gap:10px; height:100%; }
+.jf-recent-header { display:flex; align-items:center; gap:7px; font-size:0.82rem; font-weight:600; color:var(--text-secondary); }
+.jf-recent-count { margin-left:auto; font-size:0.72rem; background:rgba(255,255,255,0.06); border-radius:10px; padding:1px 8px; color:var(--text-muted); }
+.jf-recent-list { display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex:1; padding-right:2px; }
+.jf-recent-list::-webkit-scrollbar { width:3px; }
+.jf-recent-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+.jf-recent-row { display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); transition:background 0.15s; }
+.jf-recent-row:hover { background:rgba(255,255,255,0.05); }
+.jf-recent-thumb { width:36px; height:54px; object-fit:cover; border-radius:4px; flex-shrink:0; }
+.jf-recent-thumb-placeholder { width:36px; height:54px; border-radius:4px; background:rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center; color:var(--text-muted); flex-shrink:0; }
+.jf-recent-info { flex:1; min-width:0; }
+.jf-recent-title { font-size:0.82rem; font-weight:500; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.jf-recent-meta { display:flex; align-items:center; gap:4px; font-size:0.7rem; color:var(--text-muted); margin-top:3px; }

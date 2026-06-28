@@ -1,0 +1,16 @@
+window.i18n.registerModuleTranslations('favorites', 'de-DE', {
+    'fav_manager_title': 'Favoriten verwalten',
+    'btn_add_fav': 'Link hinzufügen',
+    'fav_title': 'Titel',
+    'fav_url': 'URL',
+    'fav_category': 'Kategorie',
+    'fav_icon_type': 'Icon-Typ',
+    'fav_icon_value': 'Icon-Wert',
+    'confirm_delete_fav': 'Möchtest du diesen Link wirklich löschen?',
+    'fav_cat_browser_sync': 'Aus Browser synchronisiert',
+    'fav_sort_categories_title': 'Kategorien sortieren',
+    'fav_sort_categories_hint': 'Reihenfolge per Drag & Drop oder mit den Pfeilen anpassen.',
+    'fav_sort_save': 'Reihenfolge speichern',
+    'fav_sort_saved': 'Kategorie-Reihenfolge gespeichert.',
+    'fav_no_categories': 'Noch keine Kategorien vorhanden.',
+});

@@ -1,0 +1,52 @@
+.avatar-crop-card {
+    max-width: 420px;
+}
+
+.avatar-crop-stage {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    margin: 0 auto 16px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.avatar-crop-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    pointer-events: none;
+}
+
+.avatar-crop-zoom-label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.avatar-upload-preview {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+}
+
+.admin-user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.admin-user-avatar-placeholder {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--bg-card);
+}

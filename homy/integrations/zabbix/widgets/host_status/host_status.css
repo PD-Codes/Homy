@@ -1,0 +1,86 @@
+.zabbix-host-status {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    font-size: clamp(0.72rem, 2.5cqw, 0.9rem);
+}
+
+.zabbix-host-status-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.zabbix-host-status-header .zabbix-host-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.zabbix-host-status-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.zabbix-host-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.zabbix-host-metric-label {
+    font-size: 0.72em;
+    opacity: 0.75;
+}
+
+.zabbix-host-metric-value {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.zabbix-host-temps-title {
+    font-size: 0.72em;
+    opacity: 0.75;
+    margin-top: 2px;
+}
+
+.zabbix-host-temps {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.zabbix-host-temp-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.35;
+}
+
+.zabbix-host-temp-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zabbix-host-temp-value {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+@container (max-width: 180px) {
+    .zabbix-host-status-metrics {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,14 @@
+.aniworld-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    height: 100%;
+}
+.aniworld-stats-card {
+    text-align: center;
+    padding: 10px 6px;
+    border-radius: 8px;
+    background: var(--glass-bg, rgba(255,255,255,0.04));
+}
+.aniworld-stats-card .num { font-size: 1.15rem; font-weight: 700; }
+.aniworld-stats-card .lbl { font-size: 0.68rem; opacity: 0.75; margin-top: 4px; }

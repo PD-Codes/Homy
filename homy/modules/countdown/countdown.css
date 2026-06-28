@@ -1,0 +1,108 @@
+.countdown-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    text-align: center;
+}
+
+.countdown-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+}
+
+.countdown-target {
+    font-size: 0.75rem;
+}
+
+.countdown-no-date,
+.countdown-error,
+.countdown-done {
+    font-size: 1rem;
+    color: var(--text-muted);
+}
+
+.countdown-done {
+    font-size: 1.2rem;
+    color: var(--success);
+}
+
+/* Boxes style */
+.countdown-boxes-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.countdown-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 58px;
+}
+
+.countdown-box-val {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.countdown-box-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.countdown-sep {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    align-self: flex-start;
+    padding-top: 8px;
+}
+
+/* Minimal style */
+.countdown-minimal-digits {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+}
+
+/* Banner style */
+.countdown-banner-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(var(--primary-rgb, 99,102,241), 0.12);
+    border: 1px solid rgba(var(--primary-rgb, 99,102,241), 0.25);
+    border-radius: 10px;
+    padding: 12px 20px;
+    color: var(--primary);
+    width: 100%;
+    justify-content: center;
+}
+
+.countdown-banner-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.countdown-banner-time {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-left: auto;
+}

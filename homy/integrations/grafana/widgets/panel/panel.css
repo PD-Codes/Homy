@@ -1,0 +1,8 @@
+.grafana-widget { display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: auto; }
+.grafana-health-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border-color); }
+.grafana-dashboard-list { display: flex; flex-direction: column; gap: 6px; }
+.grafana-dash-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; background: var(--glass-bg, rgba(255,255,255,0.04)); font-size: 0.85rem; }
+.grafana-dash-row code { margin-left: auto; font-size: 0.7rem; }
+.grafana-panel-block { margin-bottom: 10px; }
+.grafana-panel-title { font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
+.grafana-panel-img { width: 100%; border-radius: 8px; background: #111; }

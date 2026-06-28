@@ -1,0 +1,26 @@
+.metric-stat-widget { display:flex; flex-direction:column; justify-content:center; height:100%; padding:8px; }
+.metric-stat-label { font-size:0.75rem; color:var(--text-muted); margin-bottom:8px; }
+.metric-stat-value { font-size:clamp(1.8rem,4vw,2.6rem); font-weight:700; line-height:1; }
+.metric-stat-unit { font-size:0.9rem; font-weight:500; color:var(--text-secondary); margin-left:4px; }
+
+.metric-gauge-widget { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:8px; }
+.metric-gauge-ring {
+    --pct: 50;
+    width: min(120px, 70%);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary) calc(var(--pct) * 1%), rgba(255,255,255,0.08) 0);
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+}
+.metric-gauge-ring::before {
+    content:''; position:absolute; inset:12%; border-radius:50%; background:var(--bg-card);
+}
+.metric-gauge-inner { position:relative; z-index:1; text-align:center; }
+.metric-gauge-value { font-size:1.1rem; font-weight:700; }
+.metric-gauge-label { font-size:0.75rem; color:var(--text-muted); text-align:center; }
+
+.metric-line-widget { display:flex; flex-direction:column; height:100%; min-height:0; }
+.metric-line-label { font-size:0.72rem; color:var(--text-muted); }
+.metric-line-value { font-size:1.4rem; font-weight:700; margin-bottom:4px; }
+.metric-line-canvas { flex:1; min-height:60px; max-height:100%; }

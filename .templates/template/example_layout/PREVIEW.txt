@@ -1,0 +1,8 @@
+Lege hier eine Vorschau-Grafik ab und packe sie in die ZIP:
+
+  preview.png   (empfohlen, 16:9 oder 4:3)
+  preview.jpg
+  preview.webp
+  thumbnail.png
+
+Die Datei wird beim Upload in der Paket-Vorschau angezeigt.

@@ -1,0 +1,320 @@
+{# Admin tab panels — all UI text via data-i18n #}
+
+<div class="admin-tab-panel active" data-admin-panel="system">
+    <div class="card glass">
+        <div class="card-header"><i data-lucide="monitor" class="card-header-icon"></i><h3 data-i18n="admin_system_title">System</h3></div>
+        <div class="card-body admin-form-grid">
+            <div class="setting-item"><label for="admin-site-title" data-i18n="admin_site_title">Dashboard name</label>
+                <input type="text" id="admin-site-title" class="form-control" maxlength="80"></div>
+            <div class="setting-item"><label for="admin-site-logo-url" data-i18n="admin_site_logo">Logo URL</label>
+                <input type="url" id="admin-site-logo-url" class="form-control" placeholder="https://…/logo.png">
+                <small class="muted-text" data-i18n="admin_site_logo_hint">Or upload a logo below (stored separately from media library)</small></div>
+            <div class="setting-item">
+                <label data-i18n="admin_site_logo_upload">Upload site logo</label>
+                <div class="admin-site-logo-row" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <img id="admin-site-logo-preview" class="admin-site-logo-preview hidden" alt="" width="48" height="48" style="border-radius:8px;object-fit:contain;">
+                    <input type="file" id="admin-site-logo-file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+                    <button type="button" id="btn-admin-site-logo-pick" class="btn btn-outline btn-sm"><i data-lucide="upload"></i> <span data-i18n="admin_site_logo_pick">Choose file</span></button>
+                    <button type="button" id="btn-admin-site-logo-clear" class="btn btn-outline btn-sm hidden"><i data-lucide="trash-2"></i> <span data-i18n="admin_site_logo_clear">Remove upload</span></button>
+                </div>
+            </div>
+            <div class="setting-item"><label for="admin-default-locale" data-i18n="admin_default_locale">Default language</label>
+                <select id="admin-default-locale" class="form-control">
+                    <option value="de-DE" data-i18n="lang_de">German</option>
+                    <option value="en-US" data-i18n="lang_en">English</option>
+                </select></div>
+            <div class="setting-item">
+                <label class="admin-checkbox-row"><input type="checkbox" id="admin-maintenance-mode"><span data-i18n="admin_maintenance_mode">Maintenance mode</span></label>
+            </div>
+            <div class="setting-item"><label for="admin-license-text" data-i18n="admin_license">License</label>
+                <textarea id="admin-license-text" class="form-control" rows="2" readonly></textarea></div>
+            <div class="setting-item"><label for="admin-upload-max-avatar" data-i18n="admin_upload_max_avatar">Max profile image (MB)</label>
+                <input type="number" id="admin-upload-max-avatar" class="form-control" min="1" max="50" step="1"></div>
+            <div class="setting-item"><label for="admin-upload-max-icon" data-i18n="admin_upload_max_icon">Max icon size (MB)</label>
+                <input type="number" id="admin-upload-max-icon" class="form-control" min="1" max="50" step="1"></div>
+            <div class="setting-item"><label for="admin-upload-max-background" data-i18n="admin_upload_max_background">Max background size (MB)</label>
+                <input type="number" id="admin-upload-max-background" class="form-control" min="1" max="100" step="1"></div>
+            <div class="setting-item"><label for="admin-upload-max-package" data-i18n="admin_upload_max_package">Max module/package size (MB)</label>
+                <input type="number" id="admin-upload-max-package" class="form-control" min="1" max="200" step="1"></div>
+            <div class="admin-system-info muted-text" id="admin-system-info-box" data-i18n="admin_system_loading">Loading…</div>
+            <button type="button" class="btn btn-primary btn-save-admin-group" data-admin-group="system"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+        </div>
+    </div>
+    <div class="card glass" style="margin-top:16px;">
+        <div class="card-header"><i data-lucide="layout" class="card-header-icon"></i><h3 data-i18n="admin_public_layout">Public layout</h3></div>
+        <div class="card-body">
+            <p class="muted-text" data-i18n="admin_public_layout_desc" style="margin-bottom:12px;">Edit the default dashboard shown to guests.</p>
+            <button type="button" id="btn-edit-public-dashboard" class="btn btn-secondary"><i data-lucide="edit"></i> <span data-i18n="btn_edit_public">Edit public layout</span></button>
+        </div>
+    </div>
+</div>
+
+<div class="admin-tab-panel" data-admin-panel="users">
+    <div class="card glass">
+        <div class="card-header"><i data-lucide="users" class="card-header-icon"></i><h3 data-i18n="admin_users_title">Users</h3></div>
+        <div class="card-body">
+            <div class="admin-form-grid" style="margin-bottom:16px;">
+                <div class="setting-item"><label for="admin-default-user-role" data-i18n="admin_default_role">Default role</label>
+                    <select id="admin-default-user-role" class="form-control">
+                        <option value="user" data-i18n="role_user_short">User</option>
+                        <option value="admin" data-i18n="role_admin">Administrator</option>
+                    </select></div>
+                <div class="setting-item">
+                    <label class="admin-checkbox-row"><input type="checkbox" id="admin-registration-enabled"><span data-i18n="admin_registration">Public registration</span></label>
+                </div>
+                <button type="button" class="btn btn-primary btn-save-admin-group" data-admin-group="users"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+            </div>
+            <p class="muted-text" data-i18n="admin_users_desc">User management description</p>
+            <div class="admin-inline-actions" style="margin:12px 0;">
+                <button type="button" id="btn-open-admin-users" class="btn btn-secondary"><i data-lucide="users"></i> <span data-i18n="admin_users_manage">Manage users</span></button>
+            </div>
+            <button type="button" id="btn-open-admin-groups" class="btn btn-secondary btn-sm"><i data-lucide="users-round"></i> <span data-i18n="admin_groups_manage">Manage groups</span></button>
+        </div>
+    </div>
+</div>
+
+<div class="admin-tab-panel" data-admin-panel="auth">
+    <nav class="admin-subtab-nav" id="admin-auth-subtab-nav" data-i18n-aria-label="admin_auth_subnav_label" aria-label="Authentication sections">
+        <button type="button" class="admin-subtab active" data-auth-tab="general"><i data-lucide="shield"></i> <span data-i18n="admin_auth_sub_general">General</span></button>
+        <button type="button" class="admin-subtab" data-auth-tab="ldap"><i data-lucide="network"></i> <span data-i18n="admin_auth_sub_ldap">LDAP</span></button>
+        <button type="button" class="admin-subtab" data-auth-tab="oidc"><i data-lucide="cloud"></i> <span data-i18n="admin_auth_sub_oidc">OIDC</span></button>
+        <button type="button" class="admin-subtab" data-auth-tab="saml"><i data-lucide="key"></i> <span data-i18n="admin_auth_sub_saml">SAML</span></button>
+    </nav>
+
+    <div class="admin-subtab-panels">
+        <div class="admin-subtab-panel active" data-auth-panel="general">
+            <div class="card glass">
+                <div class="card-header"><i data-lucide="shield" class="card-header-icon"></i><h3 data-i18n="admin_auth_sub_general">General</h3></div>
+                <div class="card-body admin-form-grid">
+                    <div class="setting-item"><label for="admin-session-cookie-days" data-i18n="admin_session_timeout">Session timeout</label>
+                        <select id="admin-session-cookie-days" class="form-control">
+                            <option value="1">1</option><option value="3">3</option><option value="7">7</option>
+                            <option value="14">14</option><option value="30">30</option><option value="60">60</option>
+                            <option value="90">90</option><option value="180">180</option><option value="365">365</option>
+                        </select>
+                        <small class="muted-text" data-i18n="admin_session_sliding">Sliding session</small></div>
+                    <div class="setting-item"><label for="admin-password-min-length" data-i18n="admin_password_min">Min password length</label>
+                        <input type="number" id="admin-password-min-length" class="form-control" min="4" max="128" value="8"></div>
+                    <div class="setting-item">
+                        <label class="admin-checkbox-row"><input type="checkbox" id="admin-password-require-upper"><span data-i18n="admin_password_upper">Uppercase required</span></label>
+                    </div>
+                    <div class="setting-item">
+                        <label class="admin-checkbox-row"><input type="checkbox" id="admin-auth-mfa"><span data-i18n="admin_auth_mfa">MFA enforce</span></label>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-save-admin-group" data-admin-group="auth"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-subtab-panel" data-auth-panel="ldap">
+            <div class="card glass">
+                <div class="card-header"><i data-lucide="network" class="card-header-icon"></i><h3 data-i18n="admin_auth_ldap">LDAP</h3></div>
+                <div class="card-body admin-form-grid">
+                    <p class="muted-text" style="margin:0 0 8px;" data-i18n="admin_auth_ldap_desc">Active Directory / LDAP login configuration (JSON).</p>
+                    <div class="setting-item">
+                        <label class="admin-checkbox-row"><input type="checkbox" id="admin-auth-ldap"><span data-i18n="admin_auth_ldap_enable">Enable LDAP</span></label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="admin-auth-ldap-config" data-i18n="admin_auth_config_json">Configuration</label>
+                        <textarea id="admin-auth-ldap-config" class="form-control admin-auth-config-textarea" rows="12" placeholder='{"server":"ldap://…"}'></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-save-admin-group" data-admin-group="auth"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-subtab-panel" data-auth-panel="oidc">
+            <div class="card glass">
+                <div class="card-header"><i data-lucide="cloud" class="card-header-icon"></i><h3 data-i18n="admin_auth_oidc">OIDC</h3></div>
+                <div class="card-body admin-form-grid">
+                    <p class="muted-text" style="margin:0 0 8px;" data-i18n="admin_auth_oidc_desc">Azure AD / OpenID Connect (JSON).</p>
+                    <div class="setting-item">
+                        <label class="admin-checkbox-row"><input type="checkbox" id="admin-auth-oidc"><span data-i18n="admin_auth_oidc_enable">Enable OIDC</span></label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="admin-auth-oidc-config" data-i18n="admin_auth_config_json">Configuration</label>
+                        <textarea id="admin-auth-oidc-config" class="form-control admin-auth-config-textarea" rows="12" placeholder='{"issuer":"…"}'></textarea>
+                    </div>
+                    <div class="admin-inline-actions">
+                        <a href="/api/auth/oidc/login" class="btn btn-outline btn-sm" target="_blank" rel="noopener" data-i18n="admin_auth_oidc_test">Test OIDC</a>
+                        <button type="button" class="btn btn-primary btn-save-admin-group" data-admin-group="auth"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-subtab-panel" data-auth-panel="saml">
+            <div class="card glass">
+                <div class="card-header"><i data-lucide="key" class="card-header-icon"></i><h3 data-i18n="admin_auth_saml">SAML</h3></div>
+                <div class="card-body admin-form-grid">
+                    <p class="muted-text" style="margin:0 0 8px;" data-i18n="admin_auth_saml_desc">SAML 2.0 service provider settings (JSON).</p>
+                    <div class="setting-item">
+                        <label class="admin-checkbox-row"><input type="checkbox" id="admin-auth-saml"><span data-i18n="admin_auth_saml_enable">Enable SAML</span></label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="admin-auth-saml-config" data-i18n="admin_auth_config_json">Configuration</label>
+                        <textarea id="admin-auth-saml-config" class="form-control admin-auth-config-textarea" rows="12" placeholder='{"settings":{}}'></textarea>
+                        <small class="muted-text" data-i18n="admin_auth_saml_hint">SAML package hint</small>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-save-admin-group" data-admin-group="auth"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-tab-panel" data-admin-panel="api">
+    <div class="card glass">
+        <div class="card-header"><i data-lucide="plug" class="card-header-icon"></i><h3 data-i18n="admin_api_title">API</h3></div>
+        <div class="card-body admin-form-grid">
+            <div class="setting-item"><label for="admin-weather-key" data-i18n="admin_weather_key">OpenWeather key</label>
+                <input type="password" id="admin-weather-key" class="form-control">
+                <button type="button" id="btn-test-weather" class="btn btn-outline btn-sm" style="margin-top:8px;"><i data-lucide="zap"></i> <span data-i18n="admin_test_connection">Test</span></button>
+            </div>
+            <div class="setting-item"><label for="admin-custom-dns" data-i18n="admin_custom_dns">Custom DNS</label>
+                <input type="text" id="admin-custom-dns" class="form-control" placeholder="8.8.8.8">
+                <small class="muted-text" data-i18n="admin_custom_dns_hint">DNS hint</small></div>
+            <div class="setting-item"><label for="admin-default-theme" data-i18n="admin_default_theme">Default theme</label>
+                <select id="admin-default-theme" class="form-control"></select></div>
+            <div class="setting-item"><label for="admin-default-refresh" data-i18n="admin_default_refresh">Auto-refresh</label>
+                <select id="admin-default-refresh" class="form-control">
+                    <option value="15">15</option><option value="30">30</option>
+                    <option value="60">60</option><option value="120">120</option>
+                </select></div>
+            <button type="button" class="btn btn-primary btn-save-admin-group" data-admin-group="api"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+        </div>
+    </div>
+</div>
+
+<div class="admin-tab-panel" data-admin-panel="notify">
+    <div class="card glass">
+        <div class="card-header"><i data-lucide="mail" class="card-header-icon"></i><h3 data-i18n="admin_notify_title">SMTP</h3></div>
+        <div class="card-body admin-form-grid">
+            <div class="setting-item"><label for="admin-smtp-host" data-i18n="admin_smtp_host">Host</label><input type="text" id="admin-smtp-host" class="form-control"></div>
+            <div class="setting-item"><label for="admin-smtp-port" data-i18n="admin_smtp_port">Port</label><input type="number" id="admin-smtp-port" class="form-control" value="587"></div>
+            <div class="setting-item"><label for="admin-smtp-user" data-i18n="admin_smtp_user">User</label><input type="text" id="admin-smtp-user" class="form-control" autocomplete="off"></div>
+            <div class="setting-item"><label for="admin-smtp-password" data-i18n="admin_smtp_password">Password</label><input type="password" id="admin-smtp-password" class="form-control" autocomplete="new-password"></div>
+            <div class="setting-item"><label for="admin-smtp-from" data-i18n="admin_smtp_from">From</label><input type="email" id="admin-smtp-from" class="form-control"></div>
+            <div class="setting-item"><label class="admin-checkbox-row"><input type="checkbox" id="admin-smtp-tls" checked><span data-i18n="admin_smtp_tls">TLS</span></label></div>
+            <div class="admin-inline-actions">
+                <button type="button" id="btn-test-smtp" class="btn btn-outline btn-sm"><i data-lucide="zap"></i> <span data-i18n="admin_test_smtp">Test SMTP</span></button>
+                <button type="button" class="btn btn-primary btn-save-admin-group" data-admin-group="notify"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-tab-panel" data-admin-panel="security">
+    <div class="card glass">
+        <div class="card-header"><i data-lucide="shield" class="card-header-icon"></i><h3 data-i18n="admin_security_title">Security</h3></div>
+        <div class="card-body admin-form-grid">
+            <div class="setting-item"><label for="admin-ip-whitelist" data-i18n="admin_ip_whitelist">IP whitelist</label>
+                <input type="text" id="admin-ip-whitelist" class="form-control">
+                <small class="muted-text" data-i18n="admin_ip_whitelist_hint">IP hint</small></div>
+            <div class="setting-item"><label for="admin-trusted-proxies" data-i18n="admin_trusted_proxies">Trusted proxies</label>
+                <input type="text" id="admin-trusted-proxies" class="form-control"></div>
+            <div class="setting-item"><label for="admin-csp" data-i18n="admin_csp">CSP</label>
+                <textarea id="admin-csp" class="form-control" rows="2"></textarea></div>
+            <div class="setting-item"><label for="admin-cors" data-i18n="admin_cors">CORS</label>
+                <input type="text" id="admin-cors" class="form-control"></div>
+            <div class="setting-item">
+                <label class="admin-checkbox-row"><input type="checkbox" id="admin-layout-lock"><span data-i18n="admin_layout_lock">Layout lock</span></label>
+            </div>
+            <button type="button" class="btn btn-primary btn-save-admin-group" data-admin-group="security"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+        </div>
+    </div>
+</div>
+
+<div class="admin-tab-panel" data-admin-panel="audit">
+    <div class="card glass">
+        <div class="card-header"><i data-lucide="scroll-text" class="card-header-icon"></i><h3 data-i18n="admin_audit_title">Audit</h3></div>
+        <div class="card-body">
+            <div class="setting-item" style="max-width:280px;margin-bottom:12px;">
+                <label for="admin-audit-log-limit" data-i18n="admin_audit_limit">Limit</label>
+                <select id="admin-audit-log-limit" class="form-control">
+                    <option value="50">50</option><option value="100">100</option>
+                    <option value="200">200</option><option value="500">500</option><option value="1000">1000</option>
+                </select>
+                <button type="button" class="btn btn-primary btn-sm btn-save-admin-group" data-admin-group="system" style="margin-top:8px;" data-i18n="admin_audit_limit_save">Save limit</button>
+            </div>
+            <p class="muted-text" data-i18n="admin_audit_desc">Audit desc</p>
+            <button type="button" id="btn-open-admin-audit" class="btn btn-secondary"><i data-lucide="history"></i> <span data-i18n="admin_audit_open">Open log</span></button>
+            <button type="button" id="btn-export-audit" class="btn btn-outline btn-sm" style="margin-left:8px;"><i data-lucide="download"></i> <span data-i18n="admin_audit_export">Export</span></button>
+        </div>
+    </div>
+</div>
+
+<div class="admin-tab-panel" data-admin-panel="services">
+    <div class="card glass" style="margin-bottom:16px;">
+        <div class="card-header"><i data-lucide="sliders-horizontal" class="card-header-icon"></i><h3 data-i18n="admin_health_thresholds_title">Health thresholds</h3></div>
+        <div class="card-body">
+            <p class="muted-text" style="margin:0 0 12px;" data-i18n="admin_health_thresholds_desc">Warn and error limits for selected health checks.</p>
+            <div id="admin-health-thresholds-form" class="admin-health-thresholds-grid"></div>
+            <button type="button" id="btn-save-health-thresholds" class="btn btn-primary btn-sm" style="margin-top:12px;"><i data-lucide="save"></i> <span data-i18n="btn_save">Save</span></button>
+        </div>
+    </div>
+    <div class="card glass">
+        <div class="card-header"><i data-lucide="cpu" class="card-header-icon"></i><h3 data-i18n="admin_services_title">Services</h3></div>
+        <div class="card-body admin-form-grid">
+            <div class="setting-item">
+                <label data-i18n="admin_widget_cache">Widget cache</label>
+                <div class="admin-inline-actions">
+                    <span class="muted-text" id="admin-cache-detail">—</span>
+                    <button type="button" id="btn-admin-clear-cache" class="btn btn-secondary btn-sm"><i data-lucide="trash-2"></i> <span data-i18n="admin_cache_clear">Clear</span></button>
+                </div>
+            </div>
+            <div id="admin-scheduler-status" class="muted-text" style="margin-bottom:12px;">—</div>
+            <div class="admin-inline-actions" style="margin-bottom:12px;">
+                <button type="button" id="btn-enqueue-cache-job" class="btn btn-outline btn-sm" data-i18n="admin_job_cache">Cache job</button>
+                <button type="button" id="btn-enqueue-backup-job" class="btn btn-outline btn-sm" data-i18n="admin_job_backup">Backup job</button>
+                <button type="button" id="btn-refresh-jobs" class="btn btn-outline btn-sm"><i data-lucide="refresh-cw"></i></button>
+            </div>
+            <div id="admin-jobs-list" class="admin-jobs-list muted-text"></div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-tab-panel" data-admin-panel="backup">
+    <div class="card glass">
+        <div class="card-header"><i data-lucide="archive" class="card-header-icon"></i><h3 data-i18n="admin_backup_title">Backup</h3></div>
+        <div class="card-body">
+            <div class="admin-backup-actions">
+                <button type="button" id="btn-export-settings" class="btn btn-outline"><i data-lucide="download"></i> <span data-i18n="admin_backup_settings">Settings</span></button>
+                <button type="button" id="btn-export-audit-backup" class="btn btn-outline"><i data-lucide="download"></i> <span data-i18n="admin_backup_audit">Audit</span></button>
+                <a href="/api/admin/backup/full" id="btn-download-full-backup" class="btn btn-primary"><i data-lucide="archive"></i> <span data-i18n="admin_backup_full">Full ZIP</span></a>
+                <button type="button" id="btn-restore-full-backup" class="btn btn-danger"><i data-lucide="upload"></i> <span data-i18n="admin_backup_restore">Restore</span></button>
+                <input type="file" id="admin-restore-backup-input" accept=".zip" style="display:none;">
+                <button type="button" id="btn-export-layout-admin" class="btn btn-outline"><i data-lucide="layout"></i> <span data-i18n="admin_backup_layout">Layout</span></button>
+                <button type="button" id="btn-import-layout-admin" class="btn btn-outline"><i data-lucide="upload"></i> <span data-i18n="admin_backup_layout_import">Import layout</span></button>
+                <input type="file" id="admin-import-file-input" accept=".json" style="display:none;">
+            </div>
+            <p class="muted-text" style="margin-top:12px;font-size:0.8rem;" data-i18n="admin_backup_hint">Backup hint</p>
+        </div>
+    </div>
+</div>
+
+<div class="admin-tab-panel" data-admin-panel="modules">
+    <div class="card glass admin-modules-card">
+        <div class="card-header"><i data-lucide="layers" class="card-header-icon"></i><h3 data-i18n="admin_modules_title">Modules</h3></div>
+        <div class="card-body"><div id="admin-modules-list" class="admin-modules-list"></div></div>
+    </div>
+    <div class="card glass admin-modules-card" style="margin-top:16px;">
+        <div class="card-header"><i data-lucide="plug" class="card-header-icon"></i><h3 data-i18n="admin_integrations_plugins_title">Integration plugins</h3></div>
+        <div class="card-body">
+            <p class="muted-text" style="margin:0 0 10px;" data-i18n="admin_integrations_plugins_desc">Disable types so they no longer appear when adding integrations.</p>
+            <div id="admin-integrations-list" class="admin-modules-list"></div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-tab-panel" data-admin-panel="media">
+    <div class="card glass">
+        <div class="card-header"><i data-lucide="folder-up" class="card-header-icon"></i><h3 data-i18n="admin_media_title">Media</h3></div>
+        <div class="card-body">
+            <div id="admin-asset-manager"></div>
+            <hr style="border-color:var(--border-color);margin:24px 0;">
+            <h4 style="margin:0 0 12px;" data-i18n="admin_zip_packages">ZIP packages</h4>
+            <div id="admin-package-manager"></div>
+        </div>
+    </div>
+</div>

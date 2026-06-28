@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="ext_options_title">Homy — Settings</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1 data-i18n="ext_options_title">Homy — Settings</h1>
+
+        <section class="card">
+            <h2 data-i18n="server_url">Server URL</h2>
+            <label for="server-url" data-i18n="server_url">Server URL</label>
+            <input type="url" id="server-url" data-i18n-placeholder="server_url_hint" placeholder="">
+            <p class="muted" data-i18n="server_url_subpath_hint">Subpath hint</p>
+            <label for="username" data-i18n="username">Username</label>
+            <input type="text" id="username" autocomplete="username">
+            <label for="password" data-i18n="password">Password</label>
+            <input type="password" id="password" autocomplete="current-password">
+            <div id="mfa-block" class="hidden">
+                <label for="mfa-code" data-i18n="mfa_code">MFA code</label>
+                <input type="text" id="mfa-code" inputmode="numeric" autocomplete="one-time-code">
+                <button type="button" id="btn-mfa" data-i18n="mfa_verify">Verify MFA</button>
+            </div>
+            <div class="row">
+                <button type="button" id="btn-login" data-i18n="login">Log in</button>
+                <button type="button" id="btn-logout" class="secondary" data-i18n="logout">Log out</button>
+            </div>
+            <p id="auth-status" class="muted"></p>
+        </section>
+
+        <section class="card" id="sync-section">
+            <h2 data-i18n="sync_now">Sync</h2>
+            <label for="new-tab-mode" data-i18n="new_tab_mode">New tab mode</label>
+            <select id="new-tab-mode">
+                <option value="default" data-i18n="mode_default">Browser default (Speed Dial)</option>
+                <option value="cached" data-i18n="mode_cached">Cached dashboard</option>
+                <option value="server" data-i18n="mode_server">Open Homy server</option>
+                <option value="favorites" data-i18n="mode_favorites">Favorites only</option>
+            </select>
+            <p id="opera-newtab-hint" class="hidden muted opera-hint"></p>
+            <div class="row sync-toolbar">
+                <button type="button" id="btn-open-homy-newtab" class="secondary sync-mini" data-i18n="open_homy_newtab">Open Homy new tab</button>
+                <button type="button" id="btn-newtab-diag" class="secondary sync-mini" data-i18n="newtab_diag">New tab diagnostics</button>
+            </div>
+            <pre id="newtab-diag-output" class="hidden newtab-diag"></pre>
+            <label for="sync-interval" data-i18n="sync_interval">Auto-sync (minutes)</label>
+            <input type="number" id="sync-interval" min="15" max="1440" value="60">
+            <label for="bookmark-folder" data-i18n="bookmark_folder">Bookmarks folder</label>
+            <input type="text" id="bookmark-folder" value="Homy">
+
+            <h3 class="sync-subhead" data-i18n="homy_to_browser">Homy → Browser</h3>
+            <p class="muted" data-i18n="homy_to_browser_hint">Select Homy favorites to copy into the browser bookmark folder.</p>
+            <div class="row sync-toolbar">
+                <button type="button" id="btn-homy-all" class="secondary sync-mini" data-i18n="select_all">All</button>
+                <button type="button" id="btn-homy-none" class="secondary sync-mini" data-i18n="select_none">None</button>
+            </div>
+            <div id="homy-favorites-list" class="checkbox-list"></div>
+
+            <h3 class="sync-subhead" data-i18n="browser_to_homy">Browser → Homy</h3>
+            <p class="muted" data-i18n="browser_to_homy_hint">Imports into category “Aus Browser synchronisiert” / “Synced from browser”.</p>
+            <div class="row sync-toolbar">
+                <button type="button" id="btn-browser-all" class="secondary sync-mini" data-i18n="select_all">All</button>
+                <button type="button" id="btn-browser-none" class="secondary sync-mini" data-i18n="select_none">None</button>
+                <button type="button" id="btn-browser-reload" class="secondary sync-mini" data-i18n="reload_bookmarks">Reload</button>
+            </div>
+            <div id="browser-bookmarks-list" class="checkbox-list"></div>
+
+            <div class="row">
+                <button type="button" id="btn-save" class="secondary" data-i18n="save_settings">Save settings</button>
+                <button type="button" id="btn-sync" data-i18n="sync_now">Sync now</button>
+            </div>
+            <button type="button" id="btn-backup" class="secondary" data-i18n="download_backup">Download layout backup</button>
+            <p id="sync-status" class="muted"></p>
+        </section>
+    </div>
+    <script type="module" src="options.js"></script>
+</body>
+</html>

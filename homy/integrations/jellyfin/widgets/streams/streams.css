@@ -1,0 +1,19 @@
+.ms-container { display:flex; flex-direction:column; gap:12px; height:100%; }
+.ms-metrics { display:flex; gap:20px; flex-shrink:0; }
+.ms-metric { display:flex; flex-direction:column; gap:1px; }
+.ms-val { font-size:1.4rem; font-weight:700; line-height:1; }
+.ms-label { font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+.ms-streams { display:flex; flex-direction:column; gap:7px; overflow-y:auto; flex:1; min-height:0; }
+.ms-streams::-webkit-scrollbar { width:3px; }
+.ms-streams::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+.ms-stream-card { display:flex; gap:10px; align-items:flex-start; padding:8px 10px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); }
+.ms-avatar { width:30px; height:30px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.82rem; color:#fff; flex-shrink:0; }
+.ms-stream-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.ms-stream-top { display:flex; align-items:center; gap:5px; }
+.ms-stream-icon { width:12px; height:12px; color:var(--primary); flex-shrink:0; }
+.ms-stream-title { font-size:0.82rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ms-stream-meta { font-size:0.7rem; color:var(--text-muted); }
+.ms-progress-track { width:100%; height:3px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; margin-top:3px; }
+.ms-progress-fill { height:100%; background:var(--primary); border-radius:2px; transition:width 0.3s ease; }
+.ms-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; flex:1; color:var(--text-muted); font-size:0.85rem; }
+.ms-empty-icon { width:28px; height:28px; opacity:0.4; }

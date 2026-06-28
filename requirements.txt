@@ -1,0 +1,40 @@
+# Homy — Python dependencies
+# Python 3.8+
+#
+# Quick start (production / normal use):
+#   pip install -r requirements.txt
+#
+# Or install the project as a package (recommended — same deps as pyproject.toml):
+#   pip install .
+#   pip install ".[full]"     # + LDAP + SAML
+#   pip install -e ".[dev]"   # development + tests
+#
+# Source of truth: pyproject.toml
+
+# --- Core (required) ---------------------------------------------------------
+Flask>=3.0.0
+Flask-SQLAlchemy>=3.1.0
+requests>=2.31.0
+icalendar>=5.0.11
+waitress>=2.1.0
+authlib>=1.3.0
+pyotp>=2.9.0
+APScheduler>=3.10.0
+qrcode>=7.4
+
+# --- Optional: auth providers (uncomment if needed) ----------------------------
+# LDAP / Active Directory:
+# ldap3>=2.9
+#
+# SAML 2.0:
+# python3-saml>=1.16.0
+#
+# Both at once (same as pip install ".[full]"):
+# ldap3>=2.9
+# python3-saml>=1.16.0
+
+# --- Optional: Redis widget cache (only if REDIS_URL is set) -------------------
+# redis>=5.0
+
+# --- Development / tests (uncomment for contributors) --------------------------
+# pytest>=7.0.0

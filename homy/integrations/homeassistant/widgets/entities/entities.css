@@ -1,0 +1,181 @@
+/* Home Assistant Widget CSS Styles */
+
+.hass-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    gap: 12px;
+}
+
+.hass-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hass-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.hass-icon-header {
+    width: 16px;
+    height: 16px;
+    color: var(--primary);
+}
+
+.hass-body-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Switches Grid */
+.hass-grid-switches {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+@media (max-width: 480px) {
+    .hass-grid-switches {
+        grid-template-columns: 1fr;
+    }
+}
+
+.hass-sw-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-sm);
+}
+
+.hass-sw-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.hass-sw-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+    transition: color var(--transition-fast);
+}
+.hass-sw-icon.hass-sw-active {
+    color: #f59e0b; /* Yellow bulb / active color */
+    filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.4));
+}
+
+.hass-sw-name {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Custom switch slider */
+.hass-switch-toggle {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.hass-switch-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.hass-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    transition: .3s;
+    border-radius: 18px;
+}
+
+.hass-switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 12px;
+    width: 12px;
+    left: 2px;
+    bottom: 2px;
+    background-color: var(--text-secondary);
+    transition: .3s;
+    border-radius: 50%;
+}
+
+input:checked + .hass-switch-slider {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+input:checked + .hass-switch-slider:before {
+    transform: translateX(14px);
+    background-color: #ffffff;
+}
+
+/* Sensors Grid */
+.hass-grid-sensors {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.hass-sn-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-sm);
+}
+
+.hass-sn-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.hass-sn-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.hass-sn-val {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.hass-sn-name {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

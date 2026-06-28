@@ -1,0 +1,16 @@
+window.i18n.registerModuleTranslations('favorites', 'en-US', {
+    'fav_manager_title': 'Bookmarks Directory',
+    'btn_add_fav': 'Add Bookmark',
+    'fav_title': 'Name',
+    'fav_url': 'URL',
+    'fav_category': 'Category / Group',
+    'fav_icon_type': 'Icon Type',
+    'fav_icon_value': 'Icon Name / URL',
+    'confirm_delete_fav': 'Are you sure you want to delete this bookmark?',
+    'fav_cat_browser_sync': 'Synced from browser',
+    'fav_sort_categories_title': 'Sort categories',
+    'fav_sort_categories_hint': 'Drag and drop or use arrows to change the order.',
+    'fav_sort_save': 'Save order',
+    'fav_sort_saved': 'Category order saved.',
+    'fav_no_categories': 'No categories yet.',
+});

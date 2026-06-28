@@ -1,0 +1,18 @@
+window.i18n.registerModuleTranslations('integration_aniworld_downloader', 'de-DE', {
+    'integration_aniworld_downloader_name': 'MRX AniWorld Downloader',
+    'aniworld_stat_total': 'Downloads gesamt',
+    'aniworld_stat_completed': 'Abgeschlossen',
+    'aniworld_stat_failed': 'Fehlgeschlagen',
+    'aniworld_stat_24h': 'Letzte 24h',
+    'aniworld_stat_speed': 'Ø Geschwindigkeit',
+    'aniworld_stat_episodes': 'Episoden gesamt',
+    'aniworld_active': 'Aktiv',
+    'aniworld_paused': 'Pausiert',
+    'aniworld_queued': 'Warteschlange',
+    'aniworld_running': 'Läuft',
+    'aniworld_completed': 'Abgeschlossen',
+    'aniworld_failed': 'Fehlgeschlagen',
+    'aniworld_episode': 'Episode',
+    'aniworld_queue_empty': 'Warteschlange leer',
+    'integration_aniworld_downloader_verify_ssl_label': 'SSL-Zertifikat prüfen',
+});

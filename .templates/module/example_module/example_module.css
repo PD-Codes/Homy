@@ -1,0 +1,47 @@
+/*
+ * Widget styles for example_hello.
+ *
+ * Keep selectors tightly namespaced — these load globally alongside every
+ * other module, so generic names like .title or .card will collide.
+ * Prefix everything with your widget type name.
+ *
+ * Useful CSS variables the theme provides:
+ *   --text-primary, --text-secondary, --text-muted
+ *   --primary, --success, --danger
+ *   --border-color, --radius-sm
+ *   --widget-accent  (user-set accent color, or unset if none chosen)
+ */
+
+.example-hello {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    gap: 6px;
+    padding: 12px;
+}
+
+.example-hello-text {
+    font-size: 1.25rem;
+    font-weight: 700;
+    /* Picks up the user's accent color if they set one, otherwise falls back */
+    color: var(--widget-accent, var(--text-primary));
+}
+
+.example-hello-hint {
+    font-size: 0.75rem;
+}
+
+/* Style variant — 'Bold' */
+.example-hello--bold .example-hello-text {
+    font-size: 1.6rem;
+    font-weight: 800;
+}
+
+/* Style variant — 'Muted' */
+.example-hello--muted .example-hello-text {
+    color: var(--text-muted);
+    font-weight: 400;
+}

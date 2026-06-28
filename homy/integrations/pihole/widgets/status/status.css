@@ -1,0 +1,244 @@
+/* Pi-hole status widget */
+
+.pihole-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    min-height: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pihole-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.pihole-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: var(--widget-font-title, 0.95rem);
+    min-width: 0;
+}
+
+.pihole-brand > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pihole-shield {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.pihole-shield.status-active {
+    color: var(--success);
+}
+
+.pihole-shield.status-inactive {
+    color: var(--danger);
+}
+
+.pihole-badge {
+    font-size: var(--widget-font-xs, 0.72rem);
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 999px;
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
+}
+
+.pihole-badge.status-active {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.pihole-badge.status-inactive {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.pihole-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+}
+
+.pihole-metrics {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 20px;
+    min-height: 0;
+}
+
+.pihole-metric-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.pihole-metric-item .metric-label {
+    font-size: var(--widget-font-sm, 0.78rem);
+    color: var(--text-muted);
+    line-height: 1.2;
+}
+
+.pihole-metric-item .metric-value {
+    font-size: clamp(1rem, 5cqw, 1.35rem);
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+
+.pihole-chart-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    justify-self: end;
+}
+
+.pihole-percentage-circle {
+    --ring-size: clamp(56px, 16cqmin, 76px);
+    position: relative;
+    width: var(--ring-size);
+    height: var(--ring-size);
+    border-radius: 50%;
+    background: conic-gradient(
+        var(--primary) calc(var(--percent, 0) * 1%),
+        rgba(255, 255, 255, 0.06) 0
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.percent-inner {
+    width: calc(var(--ring-size) - 12px);
+    height: calc(var(--ring-size) - 12px);
+    border-radius: 50%;
+    background: var(--bg-card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 2px;
+    text-align: center;
+}
+
+.percent-val {
+    font-size: clamp(0.75rem, 3.5cqw, 0.95rem);
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.percent-sub {
+    font-size: 0.55rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+}
+
+.pihole-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.btn-pihole-toggle {
+    font-size: var(--widget-font-sm, 0.78rem) !important;
+    padding: 6px 12px !important;
+}
+
+.widget[data-type="pihole_status"] .widget-body {
+    overflow: hidden;
+    padding: 12px 14px !important;
+}
+
+.pihole-chart-box {
+    overflow: visible;
+    min-width: 0;
+}
+
+@container widget (max-height: 140px) {
+    .pihole-metrics {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .pihole-chart-box {
+        grid-column: 1 / -1;
+        justify-self: center;
+    }
+
+    .pihole-percentage-circle {
+        --ring-size: clamp(44px, 14cqmin, 60px);
+    }
+}
+
+@container widget (max-width: 220px) {
+    .pihole-percentage-circle {
+        --ring-size: clamp(40px, 22cqw, 52px);
+    }
+
+    .percent-inner {
+        width: calc(var(--ring-size) - 10px);
+        height: calc(var(--ring-size) - 10px);
+    }
+}
+
+/* Wide widgets: stat cards + larger ring */
+@container widget (min-width: 380px) {
+    .pihole-metrics {
+        gap: 14px 28px;
+    }
+
+    .pihole-metric-item {
+        padding: 10px 12px;
+        border-radius: var(--radius-sm, 8px);
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+    }
+
+    .pihole-percentage-circle {
+        --ring-size: clamp(64px, 18cqmin, 84px);
+    }
+}
+
+/* Narrow / short widgets */
+@container widget (max-width: 360px) {
+    .pihole-metrics {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 10px 12px;
+    }
+
+    .pihole-chart-box {
+        grid-column: 1 / -1;
+        justify-self: center;
+    }
+
+    .pihole-metric-item {
+        padding: 0;
+        background: none;
+        border: none;
+    }
+}

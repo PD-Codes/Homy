@@ -1,0 +1,26 @@
+.svc-widget { display: flex; flex-direction: column; gap: 10px; height: 100%; }
+.svc-summary { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); }
+.svc-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.svc-row { display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; margin-left:6px; border-bottom: 1px solid var(--border-color); }
+.svc-row:last-child { border-bottom: none; }
+.svc-dot { width: 8px; height: 8px; border-radius: 50%; }
+.svc-dot.status-up { background: var(--success); box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+.svc-dot.status-down { background: var(--danger); }
+.svc-name { font-size: 0.85rem; font-weight: 600; }
+.svc-url { font-size: var(--widget-font-xs, 0.68rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(180px, 100%); }
+.svc-meta { font-size: var(--widget-font-xs, 0.72rem); white-space: nowrap; }
+
+@container widget (max-width: 300px) {
+    .svc-row {
+        grid-template-columns: 8px 1fr;
+        gap: 6px;
+    }
+
+    .svc-meta {
+        display: none;
+    }
+
+    .svc-name {
+        font-size: var(--widget-font-sm, 0.78rem);
+    }
+}

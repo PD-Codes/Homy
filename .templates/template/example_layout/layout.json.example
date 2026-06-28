@@ -1,0 +1,23 @@
+{
+  "_comment": "Optional — umbenennen zu layout.json wenn euer Import dies unterstützt. Ansonsten Layout im UI exportieren.",
+  "version": 1,
+  "tabs": [
+    {
+      "id": "default",
+      "name": "Home",
+      "widgets": [
+        {
+          "type": "example_hello",
+          "title": "Willkommen",
+          "col": 0,
+          "row": 0,
+          "size_x": 4,
+          "size_y": 2,
+          "config": {
+            "greeting": "Hallo aus dem Layout-Template"
+          }
+        }
+      ]
+    }
+  ]
+}

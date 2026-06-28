@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  homy:
+    build: .
+    container_name: homy
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - FLASK_ENV=production
+      - DATA_DIR=/app/data
+      - PORT=8080
+      # REQUIRED: replace with a strong random value before deploying.
+      # Generate one: python -c "import secrets; print(secrets.token_hex(32))"
+      - SECRET_KEY=change_me_to_something_secure

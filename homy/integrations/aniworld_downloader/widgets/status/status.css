@@ -1,0 +1,13 @@
+.aniworld-status-widget { display: flex; flex-direction: column; gap: 10px; height: 100%; }
+.aniworld-status-head { display: flex; justify-content: space-between; align-items: center; }
+.aniworld-badge { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.aniworld-badge.active { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.aniworld-badge.paused { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+.aniworld-queue-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.aniworld-stat { text-align: center; padding: 6px; border-radius: 6px; background: var(--glass-bg, rgba(255,255,255,0.04)); }
+.aniworld-stat .num { display: block; font-size: 1.1rem; font-weight: 700; }
+.aniworld-stat .lbl { font-size: 0.65rem; opacity: 0.75; }
+.aniworld-current { padding: 8px; border-radius: 8px; background: var(--glass-bg, rgba(255,255,255,0.05)); }
+.aniworld-current-title { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+.aniworld-progress { height: 6px; background: var(--border-color); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+.aniworld-progress .fill { height: 100%; background: var(--accent, #818cf8); border-radius: 3px; }

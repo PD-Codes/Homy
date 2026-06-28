@@ -1,0 +1,12 @@
+.arr-cal-container { display:flex; flex-direction:column; gap:10px; height:100%; }
+.arr-cal-header { display:flex; align-items:center; gap:7px; font-size:0.82rem; font-weight:600; color:var(--text-secondary); }
+.arr-cal-period { margin-left:auto; font-size:0.7rem; color:var(--text-muted); }
+.arr-cal-list { display:flex; flex-direction:column; gap:5px; overflow-y:auto; flex:1; padding-right:2px; }
+.arr-cal-list::-webkit-scrollbar { width:3px; }
+.arr-cal-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+.arr-cal-row { display:grid; grid-template-columns:70px 1fr 20px; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,0.02); border-left:3px solid rgba(255,255,255,0.08); font-size:0.8rem; transition:background 0.15s; }
+.arr-cal-row:hover { background:rgba(255,255,255,0.05); }
+.arr-cal-row.arr-cal-has-file { border-left-color:var(--success); }
+.arr-cal-date { font-size:0.72rem; font-weight:600; color:var(--primary); white-space:nowrap; }
+.arr-cal-title { color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.arr-cal-status { display:flex; justify-content:center; }

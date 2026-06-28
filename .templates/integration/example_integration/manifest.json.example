@@ -1,0 +1,21 @@
+{
+  "_comment": "Legacy-Format: nur Upload-Vorschau. Für Installation info.cfg + example_integration.py verwenden.",
+  "type": "integration",
+  "id": "example_api",
+  "name": "Beispiel REST API (Legacy-Manifest)",
+  "description": "Siehe integration/example_integration/info.cfg für das aktuelle Format.",
+  "version": "1.0.0",
+  "icon": "plug",
+  "fields": {
+    "server_url": {
+      "label": "Server URL",
+      "type": "text",
+      "default": "http://localhost:8080"
+    },
+    "api_key": {
+      "label": "API Key",
+      "type": "password",
+      "default": ""
+    }
+  }
+}
