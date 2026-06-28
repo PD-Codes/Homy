@@ -17,7 +17,7 @@ from homy.debug_config import debug_log, is_debug
 logger = logging.getLogger(__name__)
 
 _CACHE_SUBDIR = 'favicon_cache'
-_USER_AGENT = 'Homy/1.0 (+https://github.com/dommekologe)'
+_USER_AGENT = 'Homy/1.0 (+https://github.com/PD-Codes)'
 _MIN_BYTES = 32
 _CACHE_TTL_SECONDS = 7 * 24 * 3600  # 7 days
 _HTML_CT = re.compile(r'text/html', re.I)

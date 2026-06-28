@@ -11,7 +11,7 @@ MODULES = ROOT / 'homy' / 'modules'
 INTEGRATIONS = ROOT / 'homy' / 'integrations'
 
 AUTHOR = 'Domekologe'
-URL = 'https://github.com/dommekologe'
+URL = 'https://github.com/PD-Codes'
 
 # English descriptions per folder name (fallback: title-cased id)
 DESCRIPTIONS = {

@@ -1,6 +1,6 @@
 # Homy Browser Extension
 
-Companion extension for [Homy](https://github.com/domekologe/Homy) (Firefox, Chrome, Opera).
+Companion extension for [Homy](https://github.com/PD-Codes/Homy) (Firefox, Chrome, Opera).
 
 ## Features
 
