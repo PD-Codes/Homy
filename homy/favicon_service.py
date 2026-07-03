@@ -13,6 +13,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 
 from homy.debug_config import debug_log, is_debug
+from homy.net_guard import guarded_get
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,8 @@ def _request_url(url: str, timeout=6, accept_html=False):
     accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' if accept_html else 'image/*,*/*;q=0.8'
     headers = {'User-Agent': _USER_AGENT, 'Accept': accept}
     debug_log(logger, 'GET %s verify_ssl=%s', url, verify)
-    resp = requests.get(url, timeout=timeout, headers=headers, verify=verify, allow_redirects=True)
+    # SSRF guard: validates the URL and every redirect hop (see homy.net_guard)
+    resp = guarded_get(url, timeout=timeout, headers=headers, verify=verify)
     debug_log(
         logger,
         '  -> %s len=%s ctype=%s final=%s',

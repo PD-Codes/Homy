@@ -59,8 +59,8 @@ def _teardown_ssl_context(exc):
     for token in reversed(getattr(g, '_ssl_ctx_tokens', [])):
         try:
             reset_ssl_context(token)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning('Failed to reset SSL context: %s', exc)
 
 
 @app.errorhandler(Exception)
@@ -204,7 +204,16 @@ def auth_login():
     
     if not username or not password:
         return jsonify({'error': 'Bad Request', 'message': 'Username and password required'}), 400
-        
+
+    from homy.auth import is_login_throttled, record_failed_login, clear_failed_logins
+
+    client_ip = request.remote_addr or ''
+    if is_login_throttled(username, client_ip):
+        return jsonify({
+            'error': 'Too Many Requests',
+            'message': 'Too many failed login attempts. Please try again later.',
+        }), 429
+
     from homy.admin_settings import get_setting_bool, MAINTENANCE_MODE
 
     if get_setting_bool(MAINTENANCE_MODE, False):
@@ -228,9 +237,11 @@ def auth_login():
 
     user, auth_err = authenticate_credentials(username, password)
     if not user:
+        record_failed_login(username, client_ip)
         msg = auth_err or 'Invalid username or password'
         return jsonify({'error': 'Unauthorized', 'message': msg}), 401
 
+    clear_failed_logins(username, client_ip)
     payload = login_response_payload(user)
     if payload.get('mfa_required'):
         return jsonify(payload), 200
@@ -485,6 +496,7 @@ def auth_register():
 # --- Widgets API (Layout Configuration) ---
 
 @app.route('/api/widgets', methods=['GET'])
+@login_required
 def get_widgets():
     layout_type = request.args.get('layout', 'auto')
     _, target_user_id, dashboard_layout = layout_context(layout_type)
@@ -1134,6 +1146,7 @@ def import_browser_favorites():
 
 
 @app.route('/api/favorites', methods=['GET'])
+@login_required
 def get_favorites():
     layout_type = request.args.get('layout', 'auto')
     
@@ -1337,6 +1350,7 @@ def _normalize_favorite_icon_fields(icon_type, icon_value):
 
 
 @app.route('/api/favicon', methods=['GET'])
+@login_required
 def favicon_proxy():
     from flask import Response
     from homy.favicon_service import fetch_favicon
@@ -2293,6 +2307,7 @@ def _integration_query_scope(*, enabled_only=False):
 
 
 @app.route('/api/integrations', methods=['GET'])
+@login_required
 def list_integrations():
     from homy.integration_service import get_integration_type_def
     items = _integration_query_scope(enabled_only=True).order_by(Integration.name).all()
@@ -2459,21 +2474,27 @@ def admin_cache_clear():
     return jsonify({'success': True, 'cache': widget_cache.stats()})
 
 
+# Setting keys whose values must never be returned in clear text.
+_SENSITIVE_SETTING_MARKERS = ('password', 'secret', 'token', 'key')
+
+
+def _is_sensitive_setting(name):
+    n = (name or '').lower()
+    return n.endswith('_pass') or any(m in n for m in _SENSITIVE_SETTING_MARKERS)
+
+
 @app.route('/api/settings', methods=['GET'])
 def get_settings():
     settings = Setting.query.all()
-    # Mask sensitive keys if guest
-    is_admin = 'role' in session and session['role'] == 'admin'
-    
+
     settings_dict = {}
     for s in settings:
-        if not is_admin and 'key' in s.key:
+        # Mask secrets (smtp_password, *_secret, *_token, *_pass, *key*) for everyone
+        if _is_sensitive_setting(s.key):
             settings_dict[s.key] = '********' if s.value else ''
-        elif is_admin and s.key == 'global_weather_key' and s.value:
-            settings_dict[s.key] = '********'
         else:
             settings_dict[s.key] = s.value
-            
+
     return jsonify(settings_dict)
 
 @app.route('/api/settings', methods=['POST'])
@@ -2483,7 +2504,8 @@ def save_settings():
 
     data = request.get_json() or {}
     for k, v in data.items():
-        if k == 'global_weather_key' and (not v or v == '********'):
+        # Ignore masked placeholders echoed back for sensitive settings
+        if _is_sensitive_setting(k) and (not v or v == '********'):
             continue
         if k == SETTING_KEY:
             v = str(clamp_session_days(v))

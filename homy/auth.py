@@ -1,7 +1,50 @@
+import threading
+import time
 from functools import wraps
 from flask import session, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 from homy.database import db, User
+
+# --- Login brute-force protection (in-memory, per username + IP) ---
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 15 * 60
+
+_failed_logins = {}
+_failed_logins_lock = threading.Lock()
+
+
+def _login_key(username, ip):
+    return f'{(username or "").strip().lower()}|{ip or ""}'
+
+
+def is_login_throttled(username, ip):
+    """True if this username+IP hit the failed-attempt limit within the lockout window."""
+    key = _login_key(username, ip)
+    now = time.time()
+    with _failed_logins_lock:
+        entry = _failed_logins.get(key)
+        if not entry:
+            return False
+        count, first_ts = entry
+        if now - first_ts > LOGIN_LOCKOUT_SECONDS:
+            del _failed_logins[key]
+            return False
+        return count >= LOGIN_MAX_ATTEMPTS
+
+
+def record_failed_login(username, ip):
+    key = _login_key(username, ip)
+    now = time.time()
+    with _failed_logins_lock:
+        count, first_ts = _failed_logins.get(key, (0, now))
+        if now - first_ts > LOGIN_LOCKOUT_SECONDS:
+            count, first_ts = 0, now
+        _failed_logins[key] = (count + 1, first_ts)
+
+
+def clear_failed_logins(username, ip):
+    with _failed_logins_lock:
+        _failed_logins.pop(_login_key(username, ip), None)
 
 
 def login_required(f):

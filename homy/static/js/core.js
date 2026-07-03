@@ -1,5 +1,13 @@
 // Core Application SPA Controller
 
+// Escape HTML special characters to prevent XSS when interpolating
+// user-controlled data into innerHTML template strings.
+window.escapeHtml = function (value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[ch]);
+};
+
 // App State (Globally initialized)
 window.AppState = {
     user: null,
@@ -1405,9 +1413,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Icon HTML
                 let iconHTML = '';
                 if (item.type === 'favorite' && item.iconType === 'image') {
-                    iconHTML = `<div class="search-launcher-item-icon"><img src="${item.icon}" onerror="this.src='/static/img/fallback-fav.png'; this.onerror=null;"></div>`;
+                    iconHTML = `<div class="search-launcher-item-icon"><img src="${escapeHtml(item.icon)}" onerror="this.src='/static/img/fallback-fav.png'; this.onerror=null;"></div>`;
                 } else {
-                    iconHTML = `<div class="search-launcher-item-icon"><i data-lucide="${item.icon || 'link'}"></i></div>`;
+                    iconHTML = `<div class="search-launcher-item-icon"><i data-lucide="${escapeHtml(item.icon || 'link')}"></i></div>`;
                 }
                 
                 const privateBadge = (item.is_private) ? '<i data-lucide="lock" style="width:11px;height:11px;opacity:0.6;margin-left:4px;"></i>' : '';
@@ -1416,12 +1424,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${iconHTML}
                     <div class="search-launcher-item-content">
                         <span class="search-launcher-item-title" style="display:flex;align-items:center;">
-                            ${item.title}
+                            ${escapeHtml(item.title)}
                             ${privateBadge}
                         </span>
-                        <span class="search-launcher-item-subtitle">${item.subtitle}</span>
+                        <span class="search-launcher-item-subtitle">${escapeHtml(item.subtitle)}</span>
                     </div>
-                    <span class="search-launcher-item-badge">${item.type}</span>
+                    <span class="search-launcher-item-badge">${escapeHtml(item.type)}</span>
                 `;
                 
                 itemEl.onclick = (e) => {

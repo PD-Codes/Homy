@@ -1,12 +1,14 @@
 """Central TTL cache for widget API responses and external service calls."""
 import time
 import threading
+from collections import OrderedDict
 from flask import request
 
 
 class TTLCache:
     def __init__(self, default_ttl=30, max_size=1000):
-        self._store = {}
+        # OrderedDict as LRU: most recently used entries are moved to the end
+        self._store = OrderedDict()
         self._default_ttl = default_ttl
         self._max_size = max_size
         self._lock = threading.Lock()
@@ -19,6 +21,7 @@ class TTLCache:
             if entry['expires'] <= time.time():
                 del self._store[key]
                 return None
+            self._store.move_to_end(key)
             return entry['data']
 
     def set(self, key, data, ttl=None):
@@ -30,6 +33,7 @@ class TTLCache:
                 'data': data,
                 'expires': time.time() + ttl,
             }
+            self._store.move_to_end(key)
 
     def invalidate(self, key):
         with self._lock:
@@ -52,10 +56,9 @@ class TTLCache:
             return {'entries': len(self._store), 'active': active}
 
     def _evict_oldest(self):
-        if not self._store:
-            return
-        oldest_key = min(self._store, key=lambda k: self._store[k]['expires'])
-        del self._store[oldest_key]
+        # O(1) LRU eviction: drop the least recently used entry
+        if self._store:
+            self._store.popitem(last=False)
 
 
 # Shared cache instance for all widget modules (namespaced keys: "module:id")

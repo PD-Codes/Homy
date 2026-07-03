@@ -25,15 +25,17 @@ def apply_security_headers(response):
 
     allowed = {o.strip() for o in origins_raw.split(',') if o.strip()}
     origin = request.headers.get('Origin')
-    extension_origin = origin and (
-        origin.startswith('moz-extension://')
-        or origin.startswith('chrome-extension://')
-        or origin.startswith('extension://')
-    )
-    if origin and (origin in allowed or '*' in allowed or extension_origin):
-        response.headers['Access-Control-Allow-Origin'] = origin if (origin in allowed or extension_origin) else '*'
+    # Only explicitly configured origins are allowed. Browser-extension
+    # origins must be listed individually (e.g. chrome-extension://<id>);
+    # arbitrary extension origins are no longer echoed back with credentials.
+    if origin and (origin in allowed or '*' in allowed):
+        if origin in allowed:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            # Credentials only for explicitly configured origins, never with '*'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+        else:
+            response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Vary'] = 'Origin'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     return response

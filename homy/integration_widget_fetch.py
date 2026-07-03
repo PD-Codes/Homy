@@ -11,12 +11,15 @@ from homy.integration_arr_helpers import (
     fetch_prowlarr_stats,
     normalize_arr_queue_item,
 )
+from homy.net_guard import ensure_url_allowed
 
 
 def fetch_glances_quick(config):
     base = (config.get('server_url') or '').strip().rstrip('/')
     if not base:
         raise ValueError('Glances URL required')
+    # SSRF guard: reject metadata/link-local (and private, if configured) targets
+    ensure_url_allowed(f'{base}/')
     res = requests.get(f'{base}/api/3/quicklook', timeout=8)
     res.raise_for_status()
     data = res.json()
@@ -45,6 +48,8 @@ def fetch_uptime_kuma_monitors(config):
     api_key = (config.get('api_key') or '').strip()
     if not base:
         raise ValueError('Uptime Kuma Base URL required')
+    # SSRF guard: reject metadata/link-local (and private, if configured) targets
+    ensure_url_allowed(f'{base}/')
 
     monitors = []
     if slug:

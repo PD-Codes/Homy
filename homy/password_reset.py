@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 CODE_TTL_MINUTES = 15
 CODE_LENGTH = 6
+MAX_CODE_ATTEMPTS = 5
 
 
 def _reset_key(identifier: str) -> str:
@@ -119,6 +120,18 @@ def verify_reset_code(identifier: str, code: str):
         return False, 'password_reset_expired'
     submitted = re.sub(r'\D', '', str(code or ''))
     if submitted != str(data.get('code', '')):
+        # Count failed attempts; invalidate the code after too many tries
+        attempts = int(data.get('attempts', 0)) + 1
+        row = Setting.query.filter_by(key=_reset_key(user.username)).first()
+        if row:
+            if attempts >= MAX_CODE_ATTEMPTS:
+                logger.warning('Password reset code for %s invalidated after %d failed attempts',
+                               user.username, attempts)
+                db.session.delete(row)
+            else:
+                data['attempts'] = attempts
+                row.value = json.dumps(data)
+            db.session.commit()
         return False, 'password_reset_invalid'
     return True, None
 

@@ -789,7 +789,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const title = document.createElement('div');
             title.className = 'widget-title';
-            title.innerHTML = `<i data-lucide="grip-vertical" class="widget-drag-handle"></i><span class="widget-title-text">${w.title || w.type}</span>`;
+            title.innerHTML = `<i data-lucide="grip-vertical" class="widget-drag-handle"></i><span class="widget-title-text">${escapeHtml(w.title || w.type)}</span>`;
             
             const actions = document.createElement('div');
             actions.className = 'widget-actions';
