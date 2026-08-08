@@ -90,9 +90,11 @@ window.showToast = function(message, type = 'success') {
         iconName = 'info';
     }
     
+    // Escaped: showToast is routinely called with err.message, which carries
+    // server- and integration-controlled text.
     toast.innerHTML = `
-        <div class="toast-icon"><i data-lucide="${iconName}"></i></div>
-        <div class="toast-message">${message}</div>
+        <div class="toast-icon"><i data-lucide="${window.escapeHtml(iconName)}"></i></div>
+        <div class="toast-message">${window.escapeHtml(message)}</div>
     `;
     
     if (window.lucide) {
@@ -991,16 +993,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 userProfile.classList.remove('hidden');
                 btnLoginTrigger.classList.add('hidden');
                 
-                try {
-                    const lockRes = await API.request('/api/admin/layout-lock');
-                    if (lockRes.locked && data.user.role !== 'admin') {
-                        btnEditDashboard.classList.add('hidden');
-                    } else {
-                        btnEditDashboard.classList.remove('hidden');
-                    }
-                } catch (e) {
-                    btnEditDashboard.classList.remove('hidden');
-                }
+                // Non-blocking: this only toggles one button, so it must not sit in
+                // the critical path between auth and the first dashboard paint.
+                btnEditDashboard?.classList.remove('hidden');
+                API.request('/api/admin/layout-lock')
+                    .then((lockRes) => {
+                        if (lockRes?.locked && data.user.role !== 'admin') {
+                            btnEditDashboard?.classList.add('hidden');
+                        }
+                    })
+                    .catch(() => { /* keep the button visible on failure */ });
 
                 if (data.user.role === 'admin') {
                     navAdmin.classList.remove('hidden');
@@ -1090,9 +1092,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const meta = document.createElement('div');
                 meta.className = 'admin-module-meta';
+                const esc = window.escapeHtml;
                 meta.innerHTML = `
-                    <div class="admin-module-name">${m.name} <span class="muted-text">v${m.version}</span></div>
-                    <div class="admin-module-desc">${m.description || m.id}</div>
+                    <div class="admin-module-name">${esc(m.name)} <span class="muted-text">v${esc(m.version)}</span></div>
+                    <div class="admin-module-desc">${esc(m.description || m.id)}</div>
                 `;
 
                 const switchLabel = document.createElement('label');
@@ -1503,75 +1506,111 @@ document.addEventListener('DOMContentLoaded', () => {
     // Boot App
     async function boot() {
         SearchLauncher.init();
+
+        // Kick off every independent boot request at once, before awaiting anything.
+        // Previously these ran as a serial waterfall (auth -> themes -> modules ->
+        // plugins), so the first widget paint cost the sum of all round trips instead
+        // of the slowest one. Nothing here depends on translations being loaded.
+        const themesPromise = API.request('/api/themes').catch((err) => {
+            console.error('Failed to fetch themes:', err);
+            return null;
+        });
+        const modulesPromise = API.getModules().catch((err) => {
+            console.error('Failed to fetch modules:', err);
+            return null;
+        });
+        const pluginsPromise = API.request('/api/integration-plugins').catch((err) => {
+            console.warn('Integration plugins not loaded:', err);
+            return null;
+        });
+
+        // Translations must be in place before anything calls i18n.translate(),
+        // otherwise the first paint shows raw translation keys.
+        try {
+            await window.i18n.loadCoreAppTranslations();
+        } catch (err) {
+            console.warn('Core translations not loaded:', err);
+        }
+
         await checkAuthStatus();
         navigateToSection();
-        
-        // Fetch themes list
-        let themes = [];
+
+        // Apply themes
         try {
-            themes = await API.request('/api/themes');
+            const themes = await themesPromise;
+            if (!themes) throw new Error('themes unavailable');
             AppState.availableThemes = themes;
-            
+
             const themeSelect = document.getElementById('theme-select');
             const adminThemeSelect = document.getElementById('admin-default-theme');
-            
-            themeSelect.innerHTML = '';
-            adminThemeSelect.innerHTML = '';
-            
+
+            if (themeSelect) themeSelect.innerHTML = '';
+            if (adminThemeSelect) adminThemeSelect.innerHTML = '';
+
             themes.forEach(t => {
                 const opt1 = document.createElement('option');
                 opt1.value = t.id;
                 opt1.textContent = t.name;
-                themeSelect.appendChild(opt1);
-                
+                themeSelect?.appendChild(opt1);
+
                 const opt2 = document.createElement('option');
                 opt2.value = t.id;
                 opt2.textContent = t.name;
-                adminThemeSelect.appendChild(opt2);
+                adminThemeSelect?.appendChild(opt2);
             });
-            
+
             // Restore active theme
-            themeSelect.value = AppState.theme;
+            if (themeSelect) themeSelect.value = AppState.theme;
             applyThemeStyle(AppState.theme);
             if (AppState.theme === 'custom' && AppState.user) {
                 API.getUserProfile()
                     .then((d) => window.applyCustomThemeFromPrefs?.(d.preferences))
                     .catch(() => {});
             }
+        } catch (err) {
+            console.error("Failed to apply themes:", err);
+        }
+
+        // Sidebar init must not depend on the theme request succeeding.
+        try {
             window.SidebarUI?.init?.();
         } catch (err) {
-            console.error("Failed to fetch themes:", err);
+            console.error('SidebarUI init failed:', err);
         }
-        
-        // Fetch modules list
+
+        // Modules + integration plugins (both requests already in flight)
+        const signalModulesReady = () => {
+            AppState.modulesReady = true;
+            window.dispatchEvent(new CustomEvent('homy:modules-ready'));
+            window.tryInitDashboard?.();
+        };
+
         try {
-            const data = await API.getModules();
+            const data = await modulesPromise;
+            if (!data) throw new Error('modules unavailable');
             AppState.modules = data.modules;
             AppState.availableWidgets = data.widgets;
-            
-            await window.i18n.loadAllModuleTranslations();
-            try {
-                const pluginData = await API.request('/api/integration-plugins');
-                AppState.integrationPlugins = pluginData.integrations || [];
-                await window.i18n.loadAllIntegrationTranslations(AppState.integrationPlugins);
-            } catch (pluginErr) {
-                console.warn('Integration translations not loaded:', pluginErr);
-            }
+
+            const pluginData = await pluginsPromise;
+            AppState.integrationPlugins = pluginData?.integrations || [];
+
+            // Translation bundles are loaded in parallel with each other, but strictly
+            // BEFORE the module scripts: a module that calls i18n.translate() at load
+            // time would otherwise bake in raw keys.
+            await Promise.all([
+                window.i18n.loadAllModuleTranslations().catch((e) => console.warn('Module translations not loaded:', e)),
+                window.i18n.loadAllIntegrationTranslations(AppState.integrationPlugins).catch((e) => console.warn('Integration translations not loaded:', e)),
+            ]);
             window.i18n.translateDOM();
 
-            await window.loadModuleAssets(data.modules);
-            AppState.modulesReady = true;
-            window.dispatchEvent(new CustomEvent('homy:modules-ready'));
-            if (window.tryInitDashboard) {
-                window.tryInitDashboard();
-            }
+            // Never let a single failing module asset skip signalModulesReady().
+            await window.loadModuleAssets(data.modules)
+                .catch((e) => console.error('Some module assets failed to load:', e));
+
+            signalModulesReady();
         } catch (err) {
-            console.error("Failed to fetch modules:", err);
-            AppState.modulesReady = true;
-            window.dispatchEvent(new CustomEvent('homy:modules-ready'));
-            if (window.tryInitDashboard) {
-                window.tryInitDashboard();
-            }
+            console.error("Failed to initialise modules:", err);
+            signalModulesReady();
         }
     }
 

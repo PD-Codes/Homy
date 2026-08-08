@@ -1,5 +1,5 @@
 import { getConfig } from './storage.js';
-import { getBaseUrl } from './api.js';
+import { getBaseUrl, fetchLiveWidgetData } from './api.js';
 import { getOfflineCacheOrLegacy, getCacheMeta, migrateLegacyCache } from './cache.js';
 import { tryRefreshCache } from './sync.js';
 import { renderNewTabPage } from './render-page.js';
@@ -21,27 +21,48 @@ function escapeHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 }
 
-async function paintFromCache(cfg, meta) {
-    const payload = await getOfflineCacheOrLegacy();
-    if (!payload) {
-        renderEmpty(cfg.locale || 'de-DE');
-        return null;
+function normalize(url) {
+    const trimmed = String(url || '').trim().replace(/\/+$/, '');
+    if (!trimmed) return '';
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+/** Preserve what the user typed across a re-render triggered by fresh data. */
+function captureSearchState() {
+    const input = document.querySelector('.nt-search-input');
+    if (!input) return null;
+    return { value: input.value, focused: document.activeElement === input };
+}
+
+function restoreSearchState(state) {
+    if (!state) return;
+    const input = document.querySelector('.nt-search-input');
+    if (!input) return;
+    input.value = state.value;
+    input.dispatchEvent(new Event('input'));
+    if (state.focused) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
     }
-    const locale = cfg.locale || 'de-DE';
-    let baseUrl = '';
-    try {
-        baseUrl = await getBaseUrl();
-    } catch {
-        baseUrl = '';
-    }
+}
+
+/**
+ * Single render entry point so cached, live and refreshed renders cannot disagree
+ * about which options they were built with.
+ */
+function paint(payload, cfg, { meta, live, offline }) {
+    const search = captureSearchState();
     renderNewTabPage(app, payload, {
-        locale,
+        locale: cfg.locale || 'de-DE',
         mode: cfg.newTabMode || 'cached',
-        baseUrl,
-        offline: !!cfg.cacheStale || !navigator.onLine,
+        baseUrl: normalize(cfg.serverUrl),
+        offline,
         savedAt: meta?.savedAt || cfg.lastSyncAt,
+        live,
+        liveEnabled: !!cfg.liveData,
+        showSearch: cfg.showSearchBar !== false,
     });
-    return payload;
+    restoreSearchState(search);
 }
 
 async function canReachServer() {
@@ -84,29 +105,44 @@ async function main() {
         }
     }
 
+    // Paint the cached layout first — the page must never wait on the network.
     const meta = await getCacheMeta();
-    await paintFromCache(cfg, meta);
-
-    tryRefreshCache().then((fresh) => {
-        if (!fresh) return;
-        getCacheMeta().then((m) => {
-            getConfig().then((c) => {
-                renderNewTabPage(app, fresh, {
-                    locale: c.locale || locale,
-                    mode: c.newTabMode || mode,
-                    baseUrl: c.serverUrl ? normalize(c.serverUrl) : '',
-                    offline: false,
-                    savedAt: m?.savedAt || c.lastSyncAt,
-                });
-            });
-        });
+    const payload = await getOfflineCacheOrLegacy();
+    if (!payload) {
+        renderEmpty(locale);
+        return;
+    }
+    paint(payload, cfg, {
+        meta,
+        live: null,
+        offline: !!cfg.cacheStale || !navigator.onLine,
     });
+
+    // Live values, if the user enabled them. Merged in as soon as they land.
+    let live = null;
+    if (cfg.liveData) {
+        try {
+            live = await fetchLiveWidgetData();
+            if (live) {
+                paint(payload, cfg, { meta, live, offline: false });
+            }
+        } catch (err) {
+            console.warn('[Homy] live widget data unavailable', err);
+        }
+    }
+
+    // Layout refresh in the background (tabs/widgets/favorites may have changed).
+    try {
+        const fresh = await tryRefreshCache();
+        if (fresh) {
+            const [freshMeta, freshCfg] = await Promise.all([getCacheMeta(), getConfig()]);
+            paint(fresh, freshCfg, { meta: freshMeta, live, offline: false });
+        }
+    } catch (err) {
+        console.warn('[Homy] cache refresh failed', err);
+    }
 }
 
-function normalize(url) {
-    const trimmed = String(url || '').trim().replace(/\/+$/, '');
-    if (!trimmed) return '';
-    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-}
-
-main();
+main().catch((err) => {
+    console.error('[Homy] new tab failed to initialise', err);
+});

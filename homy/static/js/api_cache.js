@@ -41,6 +41,15 @@ window.ApiCache = {
         }
     },
 
+    /** Drop cached config/catalogue responses after a mutation. */
+    invalidateIntegrations() {
+        for (const key of [...this._store.keys()]) {
+            if (key.includes('/api/integrations')) {
+                this._store.delete(key);
+            }
+        }
+    },
+
     invalidateFavorites() {
         for (const key of [...this._store.keys()]) {
             if (key.includes('/api/favorites')) {
@@ -57,6 +66,8 @@ window.ApiCache = {
 /** Default client cache TTL (ms) per API path segment */
 window.getApiCacheTtl = function (url) {
     if (!url || typeof url !== 'string') return 0;
+    // Live integration payloads must not inherit the config-endpoint TTL below.
+    if (url.includes('/api/integrations/') && url.includes('/fetch')) return 0;
     const rules = [
         ['/api/weather/', 120000],
         ['/api/calendar/', 300000],
@@ -74,6 +85,13 @@ window.getApiCacheTtl = function (url) {
         ['/api/discord-bot/', 15000],
         ['/api/custom_json/', 15000],
         ['/api/favorites', 30000],
+        // Configuration/catalogue endpoints. These were uncached, so opening a config
+        // modal with three integration widgets fired six identical requests.
+        ['/api/integrations/types', 60000],
+        ['/api/integration-plugins', 60000],
+        ['/api/integrations', 30000],
+        ['/api/modules', 60000],
+        ['/api/themes', 300000],
     ];
     for (const [path, ttl] of rules) {
         if (url.includes(path)) return ttl;

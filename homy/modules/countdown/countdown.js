@@ -16,7 +16,7 @@ window.WidgetRegistry.register('countdown', {
 
         if (!targetDate) {
             container.innerHTML = `<div class="countdown-wrap countdown-${style}">
-                <div class="countdown-label">${eventName}</div>
+                <div class="countdown-label">${window.escapeHtml(eventName)}</div>
                 <div class="countdown-no-date muted-text">${t('countdown_no_date', 'Bitte Datum konfigurieren')}</div>
             </div>`;
             return;
@@ -34,8 +34,8 @@ window.WidgetRegistry.register('countdown', {
 
             if (diff <= 0) {
                 container.innerHTML = `<div class="countdown-wrap countdown-${style}">
-                    <div class="countdown-label">${eventName}</div>
-                    <div class="countdown-done">🎉 ${eventName} ${t('countdown_done', 'ist jetzt!')}</div>
+                    <div class="countdown-label">${window.escapeHtml(eventName)}</div>
+                    <div class="countdown-done">🎉 ${window.escapeHtml(eventName)} ${t('countdown_done', 'ist jetzt!')}</div>
                 </div>`;
                 clearInterval(this._timers[widgetData.id]);
                 return;
@@ -54,7 +54,7 @@ window.WidgetRegistry.register('countdown', {
                 parts.push(`${String(minutes).padStart(2,'0')}m`);
                 if (showSec) parts.push(`${String(seconds).padStart(2,'0')}s`);
                 container.innerHTML = `<div class="countdown-wrap countdown-minimal">
-                    <div class="countdown-label">${eventName}</div>
+                    <div class="countdown-label">${window.escapeHtml(eventName)}</div>
                     <div class="countdown-minimal-digits">${parts.join(' ')}</div>
                     <div class="countdown-target muted-text">${target.toLocaleDateString(locale)}</div>
                 </div>`;
@@ -63,7 +63,7 @@ window.WidgetRegistry.register('countdown', {
                 container.innerHTML = `<div class="countdown-wrap countdown-banner">
                     <div class="countdown-banner-inner">
                         <i data-lucide="timer" style="width:18px;height:18px;"></i>
-                        <span class="countdown-banner-name">${eventName}</span>
+                        <span class="countdown-banner-name">${window.escapeHtml(eventName)}</span>
                         <span class="countdown-banner-time">${total}</span>
                     </div>
                     <div class="countdown-target muted-text">${target.toLocaleDateString(locale)}</div>
@@ -83,7 +83,7 @@ window.WidgetRegistry.register('countdown', {
                     </div>
                 `).join('<div class="countdown-sep">:</div>');
                 container.innerHTML = `<div class="countdown-wrap countdown-boxes">
-                    <div class="countdown-label">${eventName}</div>
+                    <div class="countdown-label">${window.escapeHtml(eventName)}</div>
                     <div class="countdown-boxes-row">${boxes}</div>
                     <div class="countdown-target muted-text">${target.toLocaleDateString(locale, { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</div>
                 </div>`;

@@ -135,6 +135,20 @@ export async function fetchExtensionSync() {
     }
 }
 
+/**
+ * Live widget values for the new tab page.
+ * Returns null when the server is too old to expose the endpoint, so the caller can
+ * fall back to the cached, link-only rendering instead of showing an error.
+ */
+export async function fetchLiveWidgetData() {
+    try {
+        return await apiFetch('/api/extension/widget-data?layout=auto');
+    } catch (err) {
+        if (err.status === 404) return null;
+        throw err;
+    }
+}
+
 export async function exportLayoutBackup() {
     return apiFetch('/api/layout/export?layout=auto');
 }

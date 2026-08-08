@@ -35,5 +35,8 @@
   "host_permissions": [
     "http://*/*",
     "https://*/*"
+  ],
+  "optional_permissions": [
+    "search"
   ]
 }

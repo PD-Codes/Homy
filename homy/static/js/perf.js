@@ -16,7 +16,9 @@ window.loadChartJs = function () {
     if (_chartJsPromise) return _chartJsPromise;
     _chartJsPromise = new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+        // Self-hosted: a chart widget must not depend on reaching a public CDN, which
+        // fails behind a DNS blocker or on an offline homelab.
+        script.src = '/static/vendor/chart-4.4.1.umd.min.js';
         script.onload = () => resolve(window.Chart);
         script.onerror = () => reject(new Error('Chart.js konnte nicht geladen werden'));
         document.head.appendChild(script);
@@ -25,7 +27,14 @@ window.loadChartJs = function () {
 };
 
 function _loadStylesheet(href) {
-    if (!href || document.querySelector(`link[href="${href}"]`)) return;
+    // CSS.escape guards against a module asset path containing a quote or bracket,
+    // which would otherwise make this selector throw a SyntaxError instead of deduping.
+    if (!href) return;
+    try {
+        if (document.querySelector(`link[href="${CSS.escape(href)}"]`)) return;
+    } catch (e) {
+        /* fall through and load it — a duplicate stylesheet is harmless */
+    }
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = href;
@@ -34,9 +43,17 @@ function _loadStylesheet(href) {
 
 function _loadScript(src) {
     return new Promise((resolve, reject) => {
-        if (!src || document.querySelector(`script[src="${src}"]`)) {
+        if (!src) {
             resolve();
             return;
+        }
+        try {
+            if (document.querySelector(`script[src="${CSS.escape(src)}"]`)) {
+                resolve();
+                return;
+            }
+        } catch (e) {
+            /* fall through and load it */
         }
         const script = document.createElement('script');
         script.src = src;

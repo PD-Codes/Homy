@@ -34,10 +34,10 @@ window.WidgetRegistry.register('clock', {
             }
             container.innerHTML = `
                 <div class="clock-widget">
-                    ${label ? `<div class="clock-label muted-text">${label}</div>` : ''}
+                    ${label ? `<div class="clock-label muted-text">${window.escapeHtml(label)}</div>` : ''}
                     <div class="clock-time">${timeStr}</div>
                     ${showDate ? `<div class="clock-date">${dateStr}</div>` : ''}
-                    ${showTz ? `<div class="clock-tz muted-text">${tz}</div>` : ''}
+                    ${showTz ? `<div class="clock-tz muted-text">${window.escapeHtml(tz)}</div>` : ''}
                 </div>
             `;
         };

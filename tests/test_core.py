@@ -426,18 +426,22 @@ class TestDashboardCore(unittest.TestCase):
         self.assertIn('User Public Link', titles)
 
     def test_layout_lock_and_audit_logs(self):
-        # 1. Check layout lock is initially False
+        # 1. Anonymous access is rejected: the endpoint requires a login (regression guard)
         res = self.client.get('/api/admin/layout-lock')
-        self.assertEqual(res.status_code, 200)
-        data = json.loads(res.data)
-        self.assertFalse(data['locked'])
+        self.assertEqual(res.status_code, 401)
 
         # 2. Try to lock/unlock without login / as guest (should return 401/403)
         res = self.client.post('/api/admin/layout-lock', json={'locked': True})
         self.assertEqual(res.status_code, 401)
 
-        # 3. Login as standard user and try to lock layout
+        # 3. Login as standard user: reading the lock state is allowed and initially False
         self.client.post('/api/auth/login', json={'username': 'user', 'password': 'user'})
+        res = self.client.get('/api/admin/layout-lock')
+        self.assertEqual(res.status_code, 200)
+        data = json.loads(res.data)
+        self.assertFalse(data['locked'])
+
+        # ... but changing it is not
         res = self.client.post('/api/admin/layout-lock', json={'locked': True})
         self.assertEqual(res.status_code, 403)
 

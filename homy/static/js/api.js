@@ -7,7 +7,7 @@ const API = {
         };
 
         const method = (options.method || 'GET').toUpperCase();
-        const skipCache = options.skipCache === true || window._forceWidgetRefresh === true;
+        const skipCache = options.skipCache === true || (window._forceWidgetRefreshDepth || 0) > 0;
         const cacheTtl = options.cacheTtl ?? (method === 'GET' ? window.getApiCacheTtl(url) : 0);
 
         let requestUrl = url;
@@ -34,7 +34,12 @@ const API = {
             const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
-                const error = new Error(data.message || window.i18n.translate('generic_error'));
+                // Keep the HTTP status when the body was not JSON (e.g. a proxy 502
+                // HTML page), otherwise the real failure is invisible.
+                const fallback = response.statusText
+                    ? `HTTP ${response.status} — ${response.statusText}`
+                    : window.i18n.translate('generic_error');
+                const error = new Error(data.message || fallback);
                 error.status = response.status;
                 error.data = data;
                 throw error;

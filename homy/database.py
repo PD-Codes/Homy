@@ -1,6 +1,7 @@
 import os
 import json
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import SQLAlchemyError
 
 db = SQLAlchemy()
 
@@ -111,7 +112,7 @@ class WidgetInstance(db.Model):
     __tablename__ = 'widgets'
     
     id = db.Column(db.String(36), primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True) # Null represents public layout
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True) # Null represents public layout
     module = db.Column(db.String(50), nullable=False)
     type = db.Column(db.String(50), nullable=False)
     title = db.Column(db.String(100), nullable=True)
@@ -120,8 +121,13 @@ class WidgetInstance(db.Model):
     size_x = db.Column(db.Integer, nullable=False)
     size_y = db.Column(db.Integer, nullable=False)
     config_json = db.Column(db.Text, nullable=False, default='{}')
-    tab_id = db.Column(db.String(50), nullable=False, default='default')
-    dashboard_layout = db.Column(db.String(20), nullable=False, default='desktop')
+    tab_id = db.Column(db.String(50), nullable=False, default='default', index=True)
+    dashboard_layout = db.Column(db.String(20), nullable=False, default='desktop', index=True)
+
+    # Every dashboard boot filters on (user_id, dashboard_layout).
+    __table_args__ = (
+        db.Index('ix_widgets_user_layout', 'user_id', 'dashboard_layout'),
+    )
 
     @staticmethod
     def _parse_config_json(config_json):
@@ -200,7 +206,7 @@ class FavoriteLink(db.Model):
     __tablename__ = 'favorites'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True) # Null represents public favorites
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True) # Null represents public favorites
     title = db.Column(db.String(100), nullable=False)
     url = db.Column(db.String(512), nullable=False)
     icon_type = db.Column(db.String(20), nullable=False, default='icon') # 'icon' (lucide/font class) or 'image' (url)
@@ -226,7 +232,7 @@ class Integration(db.Model):
     __tablename__ = 'integrations'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(50), nullable=False)
     config_json = db.Column(db.Text, nullable=False, default='{}')
@@ -257,9 +263,9 @@ class AuditLog(db.Model):
     __tablename__ = 'audit_logs'
     
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    timestamp = db.Column(db.DateTime, nullable=False, default=db.func.now(), index=True)
     username = db.Column(db.String(80), nullable=True)
-    event_type = db.Column(db.String(50), nullable=False)
+    event_type = db.Column(db.String(50), nullable=False, index=True)
     message = db.Column(db.String(255), nullable=False)
 
     def to_dict(self):
@@ -489,7 +495,25 @@ def init_db(app):
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-            
+
+        # Indexes for hot query columns. index=True only affects create_all on new
+        # databases, so existing installs need these explicit statements.
+        for ddl in (
+            "CREATE INDEX IF NOT EXISTS ix_widgets_user_id ON widgets (user_id)",
+            "CREATE INDEX IF NOT EXISTS ix_widgets_tab_id ON widgets (tab_id)",
+            "CREATE INDEX IF NOT EXISTS ix_widgets_dashboard_layout ON widgets (dashboard_layout)",
+            "CREATE INDEX IF NOT EXISTS ix_widgets_user_layout ON widgets (user_id, dashboard_layout)",
+            "CREATE INDEX IF NOT EXISTS ix_favorites_user_id ON favorites (user_id)",
+            "CREATE INDEX IF NOT EXISTS ix_integrations_user_id ON integrations (user_id)",
+            "CREATE INDEX IF NOT EXISTS ix_audit_logs_timestamp ON audit_logs (timestamp)",
+            "CREATE INDEX IF NOT EXISTS ix_audit_logs_event_type ON audit_logs (event_type)",
+        ):
+            try:
+                db.session.execute(db.text(ddl))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
         # Ensure default settings are populated
         theme_setting = Setting.query.filter_by(key='default_theme').first()
         if not theme_setting:
@@ -505,15 +529,16 @@ def init_db(app):
         from homy.admin_settings import ensure_default_settings
         ensure_default_settings()
 
+        import logging
         try:
             user_count = User.query.count()
             if user_count == 0:
-                import logging
                 logging.getLogger(__name__).info(
                     'Homy database ready — no users yet; setup wizard will run on first visit.'
                 )
-        except Exception:
-            pass
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            logging.getLogger(__name__).warning('Could not count users during startup: %s', e)
             
         # Startup migration for 24-column grid upgrade
         migrated_setting = Setting.query.filter_by(key='grid_resolution_migrated_24').first()

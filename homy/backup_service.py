@@ -85,9 +85,15 @@ def restore_full_backup(zip_bytes):
                 out.write(zf.read(db_archive))
             summary['database'] = True
 
+        uploads_root = os.path.realpath(os.path.join(data_dir, 'uploads'))
         for name in zf.namelist():
             if name.startswith('assets/') and not name.endswith('/'):
                 target = os.path.join(data_dir, 'uploads', name)
+                # Reject entries that escape the uploads directory (zip slip).
+                real_target = os.path.realpath(target)
+                if not real_target.startswith(uploads_root + os.sep):
+                    continue
+                target = real_target
                 os.makedirs(os.path.dirname(target), exist_ok=True)
                 with zf.open(name) as src, open(target, 'wb') as dst:
                     dst.write(src.read())

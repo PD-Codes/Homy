@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 import logging
 import json
@@ -111,12 +112,24 @@ def enforce_ip_whitelist():
 
 
 # Helper functions for layout lock and audit log
-def log_activity(event_type, message):
+def log_activity(event_type, message, commit=None):
+    """Add an audit log entry to the current session.
+
+    It must never commit the caller's half-finished transaction. When the session
+    already carries pending changes (new/dirty/deleted objects), the entry is only
+    added and the caller's own commit() persists both atomically. When nothing else
+    is pending, the entry is committed right away so it is not lost at teardown.
+    Pass commit=True/False to force the behaviour.
+    """
     try:
         username = session.get('username')
         log_entry = AuditLog(username=username, event_type=event_type, message=message)
         db.session.add(log_entry)
-        db.session.commit()
+        if commit is None:
+            pending_new = [o for o in db.session.new if o is not log_entry]
+            commit = not (pending_new or db.session.dirty or db.session.deleted)
+        if commit:
+            db.session.commit()
     except Exception as e:
         logger.error(f"Failed to write audit log: {e}")
 
@@ -177,7 +190,7 @@ def auth_status():
     needs_setup = User.query.count() == 0
     policy = auth_policy()
     if 'user_id' in session:
-        user = User.query.get(session['user_id'])
+        user = db.session.get(User, session['user_id'])
         user_payload = user.to_dict() if user else {
             'id': session['user_id'],
             'username': session['username'],
@@ -301,7 +314,7 @@ def auth_mfa_verify():
         return jsonify({'error': 'Bad Request', 'message': 'Keine ausstehende MFA-Anmeldung'}), 400
     data = request.get_json() or {}
     code = data.get('code', '')
-    user = User.query.get(pending_id)
+    user = db.session.get(User, pending_id)
     if not user or not verify_code(user, code):
         return jsonify({'error': 'Unauthorized', 'message': 'Ungültiger MFA-Code'}), 401
     clear_mfa_pending()
@@ -314,7 +327,7 @@ def auth_mfa_verify():
 @login_required
 def auth_mfa_setup_get():
     from homy.mfa_service import setup_mfa
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     if not user:
         return jsonify({'error': 'Not Found'}), 404
     data = setup_mfa(user)
@@ -325,7 +338,7 @@ def auth_mfa_setup_get():
 @login_required
 def auth_mfa_setup_confirm():
     from homy.mfa_service import confirm_mfa_setup
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     data = request.get_json() or {}
     ok, err = confirm_mfa_setup(user, data.get('code', ''))
     if not ok:
@@ -337,7 +350,7 @@ def auth_mfa_setup_confirm():
 @login_required
 def auth_mfa_disable():
     from homy.mfa_service import disable_mfa
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     disable_mfa(user)
     return jsonify({'success': True})
 
@@ -589,7 +602,7 @@ def update_widget(widget_id):
     if check_layout_lock():
         return jsonify({'error': 'Forbidden', 'message': 'Das Layout ist vom Administrator gesperrt.'}), 403
 
-    widget = WidgetInstance.query.get(widget_id)
+    widget = db.session.get(WidgetInstance, widget_id)
     if not widget:
         return jsonify({'error': 'Not Found', 'message': 'Widget not found'}), 404
         
@@ -655,7 +668,7 @@ def update_widgets_bulk():
     
     for pos in positions:
         w_id = pos.get('id')
-        widget = WidgetInstance.query.get(w_id)
+        widget = db.session.get(WidgetInstance, w_id)
         if widget:
             if widget.user_id is None:
                 if session.get('role') != 'admin':
@@ -684,7 +697,7 @@ def delete_widget(widget_id):
     if check_layout_lock():
         return jsonify({'error': 'Forbidden', 'message': 'Das Layout ist vom Administrator gesperrt.'}), 403
 
-    widget = WidgetInstance.query.get(widget_id)
+    widget = db.session.get(WidgetInstance, widget_id)
     if not widget:
         return jsonify({'error': 'Not Found', 'message': 'Widget not found'}), 404
         
@@ -715,7 +728,7 @@ def duplicate_widget(widget_id):
     if check_layout_lock():
         return jsonify({'error': 'Forbidden', 'message': 'Das Layout ist vom Administrator gesperrt.'}), 403
 
-    widget = WidgetInstance.query.get(widget_id)
+    widget = db.session.get(WidgetInstance, widget_id)
     if not widget:
         return jsonify({'error': 'Not Found', 'message': 'Widget not found'}), 404
 
@@ -754,16 +767,18 @@ def duplicate_widget(widget_id):
 
 
 @app.route('/api/tabs', methods=['GET'])
+@login_required
 def get_tabs():
     layout_type = request.args.get('layout', 'auto')
     key, _, _ = layout_context(layout_type)
-    setting = Setting.query.get(key)
+    setting = db.session.get(Setting, key)
     if setting and setting.value:
         try:
             return jsonify(json.loads(setting.value))
-        except Exception:
-            pass
-            
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(f"Corrupt tabs JSON for setting '{key}', falling back to default tabs: {e}")
+
+
     # Default tabs if setting is empty
     return jsonify([
         {'id': 'default', 'name': 'Main'}
@@ -790,7 +805,7 @@ def save_tabs():
     if not isinstance(tabs, list):
         return jsonify({'error': 'Bad Request', 'message': 'Tabs must be a list'}), 400
         
-    setting = Setting.query.get(key)
+    setting = db.session.get(Setting, key)
     if setting:
         setting.value = json.dumps(tabs)
     else:
@@ -835,7 +850,7 @@ def duplicate_tab():
     if src_uid != tgt_uid and session.get('role') != 'admin':
         return jsonify({'error': 'Forbidden', 'message': 'Cannot duplicate across users'}), 403
 
-    src_tabs_setting = Setting.query.get(layout_context(source_layout)[0])
+    src_tabs_setting = db.session.get(Setting, layout_context(source_layout)[0])
     src_tabs = []
     if src_tabs_setting and src_tabs_setting.value:
         try:
@@ -844,7 +859,7 @@ def duplicate_tab():
             pass
     src_tab_meta = next((t for t in src_tabs if t.get('id') == source_tab_id), None)
 
-    tgt_tabs_setting = Setting.query.get(tgt_tabs_key)
+    tgt_tabs_setting = db.session.get(Setting, tgt_tabs_key)
     tgt_tabs = []
     if tgt_tabs_setting and tgt_tabs_setting.value:
         try:
@@ -919,12 +934,12 @@ def extension_sync():
     widgets = widgets_query(target_user_id, dashboard_layout).all()
     favs = FavoriteLink.query.filter_by(user_id=target_user_id).order_by(FavoriteLink.order).all()
     tabs = []
-    setting = Setting.query.get(tabs_key)
+    setting = db.session.get(Setting, tabs_key)
     if setting and setting.value:
         try:
             tabs = json.loads(setting.value)
-        except Exception:
-            pass
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(f"Corrupt tabs JSON for setting '{tabs_key}', syncing empty tab list: {e}")
     vault_map = WidgetInstance.build_vault_map(widgets)
     return jsonify({
         'version': '1.0',
@@ -933,6 +948,147 @@ def extension_sync():
         'tabs': tabs,
         'widgets': [w.to_dict(vault_map=vault_map) for w in widgets],
         'favorites': [f.to_dict() for f in favs],
+    })
+
+
+#: Hard ceiling on how long /api/extension/widget-data may spend fetching upstream
+#: integrations. The browser extension paints its cached layout first and merges live
+#: values when they arrive, so a slow homelab service must never stall the new tab.
+EXTENSION_LIVE_DEADLINE_SECONDS = 8.0
+EXTENSION_LIVE_MAX_WORKERS = 6
+
+
+@app.route('/api/extension/widget-data', methods=['GET'])
+@login_required
+def extension_widget_data():
+    """Live values for the browser extension's new tab page.
+
+    The extension renders from a cached layout bundle (/api/extension/sync) and calls
+    this endpoint to fill in current values. Integrations are fetched once each, in
+    parallel, under a global deadline; whatever is not ready in time is reported as
+    unavailable rather than holding the response open.
+    """
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import datetime, timezone
+
+    from homy.integration_service import (
+        _fetch_payload_by_type as fetch_payload_by_type,
+        get_nested_value,
+        resolve_integration_config,
+    )
+
+    layout_type = request.args.get('layout', 'auto')
+    if layout_type == 'mobile':
+        layout_type = 'auto'
+    _, target_user_id, dashboard_layout = layout_context(layout_type)
+    widgets = widgets_query(target_user_id, dashboard_layout).all()
+    vault_map = WidgetInstance.build_vault_map(widgets)
+
+    # Map each widget to the integration it reads from, and collect the distinct
+    # integration ids so N widgets on one service cause exactly one upstream call.
+    widget_configs = {}
+    integration_ids = set()
+    for w in widgets:
+        cfg = w.resolve_config(vault_map=vault_map) or {}
+        widget_configs[w.id] = cfg
+        raw_id = cfg.get('integration_id')
+        if raw_id in (None, ''):
+            continue
+        try:
+            integration_ids.add(int(raw_id))
+        except (TypeError, ValueError):
+            logger.warning('Widget %s has a non-numeric integration_id: %r', w.id, raw_id)
+
+    # Resolve every integration config here, in the request thread. The worker
+    # threads below have no Flask application context, so they must never touch
+    # db.session — vault secrets are looked up through the ORM.
+    jobs = {}
+    if integration_ids:
+        rows = Integration.query.filter(Integration.id.in_(integration_ids)).all()
+        for row in rows:
+            # Only the caller's own integrations and global ones are readable.
+            if row.user_id not in (None, session.get('user_id')):
+                continue
+            try:
+                jobs[row.id] = (row.type, resolve_integration_config(row))
+            except Exception as exc:  # noqa: BLE001 - a broken config must not fail the batch
+                logger.info('Could not resolve integration %s for the extension: %s', row.id, exc)
+
+    deadline = time.monotonic() + EXTENSION_LIVE_DEADLINE_SECONDS
+    payloads = {}
+
+    def _load(iid, itype, cfg):
+        try:
+            return iid, {'ok': True, 'payload': fetch_payload_by_type(itype, cfg)}
+        except Exception as exc:  # noqa: BLE001 - one bad service must not fail the batch
+            logger.info('Extension live fetch failed for integration %s: %s', iid, exc)
+            return iid, {'ok': False, 'message': str(exc)}
+
+    if jobs:
+        workers = min(EXTENSION_LIVE_MAX_WORKERS, len(jobs))
+        # Deliberately not a `with` block: ThreadPoolExecutor.__exit__ waits for every
+        # submitted future, which would let one hung service hold the response open
+        # far past the deadline. shutdown(wait=False) lets stragglers finish detached.
+        pool = ThreadPoolExecutor(max_workers=workers)
+        try:
+            futures = [pool.submit(_load, iid, itype, cfg) for iid, (itype, cfg) in jobs.items()]
+            for future in futures:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    logger.info('Extension live fetch hit the %ss deadline', EXTENSION_LIVE_DEADLINE_SECONDS)
+                    break
+                try:
+                    iid, result = future.result(timeout=remaining)
+                    payloads[iid] = result
+                except Exception as exc:  # noqa: BLE001 - includes TimeoutError
+                    logger.info('Extension live fetch did not complete in time: %s', exc)
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
+
+    results = {}
+    for w in widgets:
+        cfg = widget_configs.get(w.id) or {}
+        raw_id = cfg.get('integration_id')
+        if raw_id in (None, ''):
+            continue
+        try:
+            iid = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+
+        if iid not in jobs:
+            results[w.id] = {'ok': False, 'message': 'Integration not available'}
+            continue
+
+        entry = payloads.get(iid)
+        if entry is None:
+            results[w.id] = {'ok': False, 'message': 'Timed out'}
+            continue
+        if not entry.get('ok'):
+            results[w.id] = {'ok': False, 'message': entry.get('message') or 'Fetch failed'}
+            continue
+
+        payload = entry.get('payload')
+        path = (cfg.get('data_path') or '').strip()
+        try:
+            value = get_nested_value(payload, path) if path else payload
+        except Exception as exc:  # noqa: BLE001 - a bad path must not fail the batch
+            results[w.id] = {'ok': False, 'message': f'Invalid data path: {exc}'}
+            continue
+
+        results[w.id] = {
+            'ok': True,
+            'type': w.type,
+            'title': w.title,
+            'value': value,
+            'unit': cfg.get('unit') or '',
+        }
+
+    return jsonify({
+        'version': '1.0',
+        'fetched_at': datetime.now(timezone.utc).isoformat(),
+        'widgets': results,
     })
 
 
@@ -950,16 +1106,17 @@ def export_layout():
     favorites = FavoriteLink.query.filter_by(user_id=target_user_id).all()
     
     tabs = []
-    setting = Setting.query.get(tabs_key)
+    setting = db.session.get(Setting, tabs_key)
     if setting and setting.value:
         try:
             tabs = json.loads(setting.value)
-        except Exception:
-            pass
-            
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(f"Corrupt tabs JSON for setting '{tabs_key}', exporting empty tab list: {e}")
+
+    vault_map = WidgetInstance.build_vault_map(widgets)
     export_data = {
         'version': '1.0',
-        'widgets': [w.to_dict() for w in widgets],
+        'widgets': [w.to_dict(vault_map=vault_map) for w in widgets],
         'favorites': [f.to_dict() for f in favorites],
         'tabs': tabs
     }
@@ -987,7 +1144,7 @@ def import_layout():
     widgets_query(target_user_id, dashboard_layout).delete()
     FavoriteLink.query.filter_by(user_id=target_user_id).delete()
     
-    setting = Setting.query.get(tabs_key)
+    setting = db.session.get(Setting, tabs_key)
     if setting:
         setting.value = json.dumps(tabs_data)
     else:
@@ -1057,7 +1214,7 @@ def _favorite_category_order_key(user_id):
 def favorite_category_order():
     key = _favorite_category_order_key(session['user_id'])
     if request.method == 'GET':
-        setting = Setting.query.get(key)
+        setting = db.session.get(Setting, key)
         order = []
         if setting and setting.value:
             try:
@@ -1080,7 +1237,7 @@ def favorite_category_order():
             continue
         seen.add(name)
         cleaned.append(name)
-    setting = Setting.query.get(key)
+    setting = db.session.get(Setting, key)
     if setting:
         setting.value = json.dumps(cleaned)
     else:
@@ -1213,7 +1370,7 @@ def create_favorite():
 @app.route('/api/favorites/<int:fav_id>', methods=['PUT'])
 @login_required
 def update_favorite(fav_id):
-    fav = FavoriteLink.query.get(fav_id)
+    fav = db.session.get(FavoriteLink, fav_id)
     if not fav:
         return jsonify({'error': 'Not Found', 'message': 'Favorite link not found'}), 404
         
@@ -1252,7 +1409,7 @@ def update_favorite(fav_id):
 @app.route('/api/favorites/<int:fav_id>', methods=['DELETE'])
 @login_required
 def delete_favorite(fav_id):
-    fav = FavoriteLink.query.get(fav_id)
+    fav = db.session.get(FavoriteLink, fav_id)
     if not fav:
         return jsonify({'error': 'Not Found', 'message': 'Favorite link not found'}), 404
         
@@ -1271,6 +1428,7 @@ def delete_favorite(fav_id):
 # --- User Assets (Icons / Backgrounds) ---
 
 @app.route('/api/assets', methods=['GET'])
+@login_required
 def list_assets_api():
     from homy.asset_service import list_assets
     category = request.args.get('category')
@@ -1433,6 +1591,7 @@ def _can_delete_package(pkg, session):
 
 
 @app.route('/api/packages', methods=['GET'])
+@login_required
 def list_packages_api():
     package_type = request.args.get('type')
     scope = request.args.get('scope', 'all')
@@ -1640,7 +1799,7 @@ def admin_toggle_module():
         return jsonify({'error': 'Not Found', 'message': 'Module not found'}), 404
         
     setting_key = f'module_disabled_{module_id}'
-    setting = Setting.query.get(setting_key)
+    setting = db.session.get(Setting, setting_key)
     
     val = 'false' if enabled else 'true'
     
@@ -1767,7 +1926,7 @@ def admin_create_user():
 @app.route('/api/admin/users/<int:user_id>', methods=['PUT'])
 @admin_required
 def admin_update_user(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'Not Found', 'message': 'User not found'}), 404
         
@@ -1806,7 +1965,7 @@ def admin_update_user(user_id):
 @app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
 @admin_required
 def admin_delete_user(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'Not Found', 'message': 'User not found'}), 404
         
@@ -1995,7 +2154,7 @@ def admin_create_group():
 @app.route('/api/admin/groups/<int:group_id>', methods=['PUT'])
 @admin_required
 def admin_update_group(group_id):
-    group = Group.query.get(group_id)
+    group = db.session.get(Group, group_id)
     if not group:
         return jsonify({'error': 'Not Found'}), 404
     data = request.get_json() or {}
@@ -2012,7 +2171,7 @@ def admin_update_group(group_id):
 @app.route('/api/admin/groups/<int:group_id>', methods=['DELETE'])
 @admin_required
 def admin_delete_group(group_id):
-    group = Group.query.get(group_id)
+    group = db.session.get(Group, group_id)
     if not group:
         return jsonify({'error': 'Not Found'}), 404
     name = group.name
@@ -2026,14 +2185,14 @@ def admin_delete_group(group_id):
 @app.route('/api/admin/users/<int:user_id>/groups', methods=['PUT'])
 @admin_required
 def admin_set_user_groups(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': 'Not Found'}), 404
     data = request.get_json() or {}
     group_ids = data.get('group_ids', [])
     UserGroup.query.filter_by(user_id=user_id).delete()
     for gid in group_ids:
-        if Group.query.get(gid):
+        if db.session.get(Group, gid):
             db.session.add(UserGroup(user_id=user_id, group_id=gid))
     db.session.commit()
     return jsonify(user.to_dict(include_groups=True))
@@ -2126,7 +2285,7 @@ def admin_test_weather():
 @app.route('/api/user/profile', methods=['GET'])
 @login_required
 def user_get_profile():
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     if not user:
         return jsonify({'error': 'Not Found'}), 404
     from homy.admin_settings import get_user_preferences
@@ -2141,7 +2300,7 @@ def user_get_profile():
 def user_update_profile():
     from homy.admin_settings import save_user_preferences
 
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     if not user:
         return jsonify({'error': 'Not Found'}), 404
     data = request.get_json() or {}
@@ -2158,7 +2317,7 @@ def user_update_profile():
         else:
             try:
                 aid = int(raw)
-                asset = UserAsset.query.get(aid)
+                asset = db.session.get(UserAsset, aid)
                 if asset and asset.category in ('avatar', 'icon') and (
                     asset.user_id == user.id or asset.user_id is None
                 ):
@@ -2191,7 +2350,7 @@ def user_change_password():
     from homy.admin_settings import validate_password
     from werkzeug.security import generate_password_hash
 
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     if not user:
         return jsonify({'error': 'Not Found'}), 404
     if (user.auth_provider or 'local') != 'local':
@@ -2265,6 +2424,7 @@ def user_test_notification():
 # --- Integrations API ---
 
 @app.route('/api/integrations/types', methods=['GET'])
+@login_required
 def get_integration_types():
     from homy.integration_disable import get_disabled_integration_ids
     from homy.integration_service import (
@@ -2368,7 +2528,7 @@ def create_integration():
 @login_required
 def update_integration(integration_id):
     from homy.integration_service import get_integration_type_def, integration_vault_key
-    integration = Integration.query.get(integration_id)
+    integration = db.session.get(Integration, integration_id)
     if not integration:
         return jsonify({'error': 'Not Found'}), 404
     if integration.user_id is None and session.get('role') != 'admin':
@@ -2407,7 +2567,7 @@ def update_integration(integration_id):
 def delete_integration(integration_id):
     from homy.integration_service import get_integration_type_def, integration_vault_key
 
-    integration = Integration.query.get(integration_id)
+    integration = db.session.get(Integration, integration_id)
     if not integration:
         return jsonify({'error': 'Not Found'}), 404
     if integration.user_id is None and session.get('role') != 'admin':
@@ -2427,15 +2587,25 @@ def delete_integration(integration_id):
     return jsonify({'success': True})
 
 
+# Config keys a caller may override per request. Must never contain anything that
+# influences the target host/URL/port or credentials, otherwise this endpoint
+# becomes an SSRF proxy. The widget config UI only ever overrides 'endpoint',
+# which selects a predefined endpoint of the integration.
+ALLOWED_FETCH_OVERRIDE_KEYS = frozenset({'endpoint'})
+
+
 @app.route('/api/integrations/<int:integration_id>/fetch', methods=['GET'])
+@login_required
 def fetch_integration(integration_id):
     from homy.integration_service import fetch_integration_payload_with_overrides, get_nested_value
-    integration = Integration.query.get(integration_id)
+    integration = db.session.get(Integration, integration_id)
     if not integration or not integration.enabled:
         return jsonify({'error': 'Not Found'}), 404
 
     user_id = session.get('user_id')
     is_admin = session.get('role') == 'admin'
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
     if integration.user_id is not None and integration.user_id != user_id and not is_admin:
         return jsonify({'error': 'Forbidden'}), 403
 
@@ -2444,7 +2614,7 @@ def fetch_integration(integration_id):
     for key, value in request.args.items():
         if key.startswith('override_'):
             cfg_key = key[len('override_'):]
-            if cfg_key:
+            if cfg_key in ALLOWED_FETCH_OVERRIDE_KEYS:
                 overrides[cfg_key] = value
     try:
         payload = fetch_integration_payload_with_overrides(integration, overrides=overrides)
@@ -2483,13 +2653,67 @@ def _is_sensitive_setting(name):
     return n.endswith('_pass') or any(m in n for m in _SENSITIVE_SETTING_MARKERS)
 
 
+# Explicit allowlist of settings the (possibly unauthenticated) frontend may read.
+PUBLIC_SETTING_KEYS = frozenset({
+    'site_title',
+    'site_logo_url',
+    'default_theme',
+    'default_locale',
+    'default_widget_refresh',
+    'registration_enabled',
+    'maintenance_mode',
+    'global_layout_locked',
+    'license_text',
+})
+
+# Additional keys authenticated admins may read through this endpoint.
+ADMIN_SETTING_KEYS = frozenset({
+    'password_min_length',
+    'password_require_upper',
+    'default_user_role',
+    'audit_log_limit',
+    'session_cookie_days',
+    'upload_max_avatar_mb',
+    'upload_max_icon_mb',
+    'upload_max_background_mb',
+    'upload_max_package_mb',
+    'auth_ldap_enabled',
+    'auth_oidc_enabled',
+    'auth_saml_enabled',
+    'auth_mfa_required',
+    'smtp_host',
+    'smtp_port',
+    'smtp_user',
+    'smtp_from',
+    'smtp_tls',
+    'security_ip_whitelist',
+    'security_trusted_proxies',
+    'security_csp',
+    'security_cors_origins',
+    'custom_dns_servers',
+})
+
+# Prefixes that must never be exposed through this endpoint, for any role.
+_FORBIDDEN_SETTING_PREFIXES = ('vault_', 'user_', 'integration_vault_', 'tabs_')
+
+
+def _forbidden_setting(key):
+    k = (key or '').lower()
+    if k.startswith(_FORBIDDEN_SETTING_PREFIXES):
+        return True
+    return k.startswith('auth_') and k.endswith('_config')
+
+
 @app.route('/api/settings', methods=['GET'])
 def get_settings():
-    settings = Setting.query.all()
+    is_admin = session.get('role') == 'admin' and 'user_id' in session
+    allowed = PUBLIC_SETTING_KEYS | ADMIN_SETTING_KEYS if is_admin else PUBLIC_SETTING_KEYS
 
     settings_dict = {}
-    for s in settings:
-        # Mask secrets (smtp_password, *_secret, *_token, *_pass, *key*) for everyone
+    for s in Setting.query.filter(Setting.key.in_(sorted(allowed))).all():
+        if _forbidden_setting(s.key):
+            continue
+        # Second layer of defence: never emit a secret-looking value in clear text.
         if _is_sensitive_setting(s.key):
             settings_dict[s.key] = '********' if s.value else ''
         else:
@@ -2509,7 +2733,7 @@ def save_settings():
             continue
         if k == SETTING_KEY:
             v = str(clamp_session_days(v))
-        setting = Setting.query.get(k)
+        setting = db.session.get(Setting, k)
         if setting:
             setting.value = str(v)
         else:
@@ -2522,16 +2746,24 @@ def save_settings():
 
 # --- Themes API & Static Assets ---
 
+# Names that are used to build a filesystem base directory must be strictly validated,
+# because send_from_directory can only protect the part below the base directory.
+_SAFE_NAME_RE = re.compile(r'[A-Za-z0-9_-]+')
+
+
 @app.route('/lang/<path:filename>')
 def serve_app_lang(filename):
     lang_dir = os.path.join(app.root_path, 'lang')
     if not filename.endswith('.js'):
         return jsonify({'error': 'Not Found'}), 404
+    # The base dir is constant here; send_from_directory rejects traversal in filename.
     return send_from_directory(lang_dir, filename)
 
 
 @app.route('/themes/<theme_name>/<path:filename>')
 def serve_theme_static(theme_name, filename):
+    if not _SAFE_NAME_RE.fullmatch(theme_name or ''):
+        return jsonify({'error': 'Not Found'}), 404
     themes_dir = os.path.join(app.root_path, 'themes')
     theme_path = os.path.join(themes_dir, theme_name)
     return send_from_directory(theme_path, filename)
@@ -2595,6 +2827,7 @@ def get_themes():
 # --- Layout Lock Admin API ---
 
 @app.route('/api/admin/layout-lock', methods=['GET'])
+@login_required
 def get_layout_lock():
     setting = db.session.get(Setting, 'global_layout_locked')
     locked = (setting.value == 'true') if setting else False

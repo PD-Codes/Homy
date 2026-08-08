@@ -279,22 +279,24 @@ def validate_package_zip_on_disk(zip_path, package_type):
     except zipfile.BadZipFile:
         return False, 'Ungültige ZIP-Datei', None
 
-    names = [n for n in zf.namelist() if not n.endswith('/')]
-    if not names:
-        return False, 'ZIP ist leer', None
-    if any('..' in n or n.startswith('/') for n in zf.namelist()):
-        return False, 'ZIP enthält ungültige Pfade', None
+    # Close the handle on every path — a lingering handle blocks os.remove on Windows.
+    with zf:
+        names = [n for n in zf.namelist() if not n.endswith('/')]
+        if not names:
+            return False, 'ZIP ist leer', None
+        if any('..' in n or n.startswith('/') for n in zf.namelist()):
+            return False, 'ZIP enthält ungültige Pfade', None
 
-    sec_ok, sec_msg = _security_scan_zip(zf)
-    if not sec_ok:
-        return False, sec_msg, None
+        sec_ok, sec_msg = _security_scan_zip(zf)
+        if not sec_ok:
+            return False, sec_msg, None
 
-    roots = _zip_root_names(zf)
-    if package_type == 'module':
-        return _validate_module_zip(zf, roots)
-    if package_type == 'integration':
-        return _validate_integration_zip(zf, roots)
-    return _validate_template_zip(zf, roots)
+        roots = _zip_root_names(zf)
+        if package_type == 'module':
+            return _validate_module_zip(zf, roots)
+        if package_type == 'integration':
+            return _validate_integration_zip(zf, roots)
+        return _validate_template_zip(zf, roots)
 
 
 def extract_module_package(zip_path, modules_dir):
@@ -308,30 +310,31 @@ def extract_module_package(zip_path, modules_dir):
     except zipfile.BadZipFile as e:
         return None, str(e)
 
-    info_files = _find_in_zip(zf, 'info.cfg')
-    if not info_files:
-        return None, 'info.cfg fehlt'
+    with zf:
+        info_files = _find_in_zip(zf, 'info.cfg')
+        if not info_files:
+            return None, 'info.cfg fehlt'
 
-    info_path = info_files[0]
-    module_dir = info_path.rsplit('/', 1)[0]
-    module_name = os.path.basename(module_dir)
+        info_path = info_files[0]
+        module_dir = info_path.rsplit('/', 1)[0]
+        module_name = os.path.basename(module_dir)
 
-    target = os.path.join(modules_dir, module_name)
-    if os.path.exists(target):
-        return None, f'Modul "{module_name}" existiert bereits'
+        target = os.path.join(modules_dir, module_name)
+        if os.path.exists(target):
+            return None, f'Modul "{module_name}" existiert bereits'
 
-    prefix = module_dir + '/'
-    os.makedirs(target, exist_ok=True)
-    for member in zf.namelist():
-        if not member.startswith(prefix) or member.endswith('/'):
-            continue
-        rel = member[len(prefix):]
-        if not rel or '..' in rel:
-            continue
-        dest = os.path.join(target, rel)
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
-        with zf.open(member) as src, open(dest, 'wb') as out:
-            out.write(src.read())
+        prefix = module_dir + '/'
+        os.makedirs(target, exist_ok=True)
+        for member in zf.namelist():
+            if not member.startswith(prefix) or member.endswith('/'):
+                continue
+            rel = member[len(prefix):]
+            if not rel or '..' in rel:
+                continue
+            dest = os.path.join(target, rel)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            with zf.open(member) as src, open(dest, 'wb') as out:
+                out.write(src.read())
 
     return module_name, None
 
@@ -347,34 +350,35 @@ def extract_integration_package(zip_path, integrations_dir):
     except zipfile.BadZipFile as e:
         return None, str(e)
 
-    info_files = _find_in_zip(zf, 'info.cfg')
-    if not info_files:
-        return None, 'info.cfg fehlt'
+    with zf:
+        info_files = _find_in_zip(zf, 'info.cfg')
+        if not info_files:
+            return None, 'info.cfg fehlt'
 
-    info_path = info_files[0]
-    integration_dir = info_path.rsplit('/', 1)[0]
-    folder_name = os.path.basename(integration_dir)
+        info_path = info_files[0]
+        integration_dir = info_path.rsplit('/', 1)[0]
+        folder_name = os.path.basename(integration_dir)
 
-    cfg = configparser.ConfigParser()
-    cfg.read_string(_read_zip_text(zf, info_path) or '')
-    integration_id = cfg.get('info', 'id', fallback=folder_name).strip() or folder_name
+        cfg = configparser.ConfigParser()
+        cfg.read_string(_read_zip_text(zf, info_path) or '')
+        integration_id = cfg.get('info', 'id', fallback=folder_name).strip() or folder_name
 
-    target = os.path.join(integrations_dir, folder_name)
-    if os.path.exists(target):
-        return None, f'Integration "{folder_name}" existiert bereits'
+        target = os.path.join(integrations_dir, folder_name)
+        if os.path.exists(target):
+            return None, f'Integration "{folder_name}" existiert bereits'
 
-    prefix = integration_dir + '/'
-    os.makedirs(target, exist_ok=True)
-    for member in zf.namelist():
-        if not member.startswith(prefix) or member.endswith('/'):
-            continue
-        rel = member[len(prefix):]
-        if not rel or '..' in rel:
-            continue
-        dest = os.path.join(target, rel)
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
-        with zf.open(member) as src, open(dest, 'wb') as out:
-            out.write(src.read())
+        prefix = integration_dir + '/'
+        os.makedirs(target, exist_ok=True)
+        for member in zf.namelist():
+            if not member.startswith(prefix) or member.endswith('/'):
+                continue
+            rel = member[len(prefix):]
+            if not rel or '..' in rel:
+                continue
+            dest = os.path.join(target, rel)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            with zf.open(member) as src, open(dest, 'wb') as out:
+                out.write(src.read())
 
     return folder_name, None
 
@@ -384,11 +388,12 @@ def extract_preview_from_zip(zip_path, dest_path):
         zf = zipfile.ZipFile(zip_path)
     except zipfile.BadZipFile:
         return False
-    for candidate in ('preview.png', 'preview.jpg', 'preview.webp', 'thumbnail.png'):
-        hits = _find_in_zip(zf, candidate)
-        if not hits:
-            continue
-        with zf.open(hits[0]) as src, open(dest_path, 'wb') as out:
-            out.write(src.read())
-        return True
+    with zf:
+        for candidate in ('preview.png', 'preview.jpg', 'preview.webp', 'thumbnail.png'):
+            hits = _find_in_zip(zf, candidate)
+            if not hits:
+                continue
+            with zf.open(hits[0]) as src, open(dest_path, 'wb') as out:
+                out.write(src.read())
+            return True
     return False

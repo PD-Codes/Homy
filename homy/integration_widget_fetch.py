@@ -1,5 +1,6 @@
 """Shared data fetchers for integration-backed dashboard widgets."""
 
+import contextlib
 import importlib
 import xml.etree.ElementTree as ET
 
@@ -279,14 +280,18 @@ def fetch_torrent_status(integration_type, config):
 def _qbittorrent_session(base, user, pwd):
     """Return a requests.Session authenticated against qBittorrent WebUI."""
     sess = requests.Session()
-    if user:
-        resp = sess.post(
-            f'{base}/api/v2/auth/login',
-            data={'username': user, 'password': pwd or ''},
-            timeout=8,
-        )
-        if resp.text.strip() != 'Ok.':
-            raise ValueError(f'qBittorrent login fehlgeschlagen: {resp.text[:80]}')
+    try:
+        if user:
+            resp = sess.post(
+                f'{base}/api/v2/auth/login',
+                data={'username': user, 'password': pwd or ''},
+                timeout=8,
+            )
+            if resp.text.strip() != 'Ok.':
+                raise ValueError(f'qBittorrent login fehlgeschlagen: {resp.text[:80]}')
+    except Exception:
+        sess.close()
+        raise
     return sess
 
 
@@ -296,26 +301,27 @@ def _fetch_qbittorrent_status(config):
         raise ValueError('qBittorrent URL required')
     user = (config.get('username') or '').strip()
     pwd = config.get('password') or ''
-    sess = _qbittorrent_session(base, user, pwd)
-    transfer = sess.get(f'{base}/api/v2/transfer/info', timeout=10)
-    transfer.raise_for_status()
-    tdata = transfer.json()
-    torrents = sess.get(
-        f'{base}/api/v2/torrents/info',
-        params={'filter': 'active'},
-        timeout=10,
-    )
-    torrents.raise_for_status()
-    active = []
-    for tor in (torrents.json() or [])[:10]:
-        active.append({
-            'name': tor.get('name', 'Torrent'),
-            'progress': round(float(tor.get('progress', 0)) * 100, 1),
-            'dlspeed': tor.get('dlspeed', 0),
-            'upspeed': tor.get('upspeed', 0),
-            'state': tor.get('state', ''),
-            'eta': tor.get('eta', -1),
-        })
+    # closing() so the session (and its connection pool) is released on every path
+    with contextlib.closing(_qbittorrent_session(base, user, pwd)) as sess:
+        transfer = sess.get(f'{base}/api/v2/transfer/info', timeout=10)
+        transfer.raise_for_status()
+        tdata = transfer.json()
+        torrents = sess.get(
+            f'{base}/api/v2/torrents/info',
+            params={'filter': 'active'},
+            timeout=10,
+        )
+        torrents.raise_for_status()
+        active = []
+        for tor in (torrents.json() or [])[:10]:
+            active.append({
+                'name': tor.get('name', 'Torrent'),
+                'progress': round(float(tor.get('progress', 0)) * 100, 1),
+                'dlspeed': tor.get('dlspeed', 0),
+                'upspeed': tor.get('upspeed', 0),
+                'state': tor.get('state', ''),
+                'eta': tor.get('eta', -1),
+            })
     return {
         'client': 'qBittorrent',
         'dl_speed': tdata.get('dl_info_speed', 0),
@@ -739,7 +745,7 @@ def fetch_arr_calendar(integration_type, config, days_ahead=7):
     if not base or not api_key:
         raise ValueError('Server URL und API Key erforderlich')
     headers = {'X-Api-Key': api_key, 'Accept': 'application/json'}
-    now = _dt.datetime.utcnow()
+    now = _dt.datetime.now(_dt.timezone.utc)
     start = now.strftime('%Y-%m-%d')
     end = (now + _dt.timedelta(days=days_ahead)).strftime('%Y-%m-%d')
     params = {'unmonitored': 'false', 'start': start, 'end': end}

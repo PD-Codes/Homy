@@ -442,6 +442,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (widgets.length) {
                 this._tabDomCache[tabId] = widgets;
             }
+            // Stashed widgets are detached, not destroyed. Without this, clock and
+            // countdown widgets kept their 1 Hz setInterval running against a node
+            // that is no longer in the document — forever, for every tab visited.
+            widgets.forEach((el) => {
+                const id = el.getAttribute('data-id');
+                if (!id) return;
+                const data = this.getWidgetData(id);
+                const renderer = data && window.WidgetRegistry?.get(data.type);
+                if (renderer?.onRemove) {
+                    try { renderer.onRemove(id); } catch (e) { /* renderer cleanup is best-effort */ }
+                }
+                window.ChartWidgets?.destroyChart?.(el.querySelector('.widget-body') || el);
+            });
             gridEl.innerHTML = '';
             if (window.WidgetRefreshManager) {
                 WidgetRefreshManager.stopAll();
@@ -471,6 +484,19 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             gridController.enableEditing(AppState.isEditingLayout);
             gridController.arrangeWidgetsDOM();
+
+            // _stashActiveTabDom() tore down renderers that own timers, so restart
+            // exactly those. They are local-only (clock, countdown) — no network cost.
+            tabWidgets.forEach((w) => {
+                const renderer = window.WidgetRegistry?.get(w.type);
+                if (!renderer?.onRemove) return;
+                const el = gridEl.querySelector(`.widget[data-id="${w.id}"]`);
+                const body = el?.querySelector('.widget-body');
+                if (!body) return;
+                Promise.resolve(this.renderWidgetBody(body, w, el))
+                    .catch((err) => console.warn('[Homy] widget re-render failed', w.id, err));
+            });
+
             window.refreshLucideIcons(gridEl);
             if (window.WidgetRefreshManager) {
                 const startRefresh = () => WidgetRefreshManager.start();
@@ -645,11 +671,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 ApiCache.invalidateWidget(widgetId);
             }
 
-            window._forceWidgetRefresh = options.force === true;
+            // Ref-counted, not a boolean: refreshes run concurrently (the refresh
+            // manager allows 2, plus the manual button), and a plain flag let the
+            // first widget to finish clear it while another forced refresh was still
+            // in flight — that one then silently served stale cache.
+            const forced = options.force === true;
+            if (forced) window._forceWidgetRefreshDepth = (window._forceWidgetRefreshDepth || 0) + 1;
             try {
                 await this.renderWidgetBody(body, w, widgetEl, options);
             } finally {
-                window._forceWidgetRefresh = false;
+                if (forced) {
+                    window._forceWidgetRefreshDepth = Math.max(0, (window._forceWidgetRefreshDepth || 1) - 1);
+                }
             }
             window.refreshLucideIcons(widgetEl);
             this._updateRefreshStatus(widgetEl, w);
@@ -1329,6 +1362,11 @@ document.addEventListener('DOMContentLoaded', () => {
             list.innerHTML = '';
             host.innerHTML = '<div class="widget-loading"><div class="spinner"></div></div>';
 
+            // Declared before first use: this helper used to be defined further down,
+            // so the empty-state branch below threw a ReferenceError (TDZ) for any user
+            // without configured integrations.
+            const t = (key, fb) => window.i18n.translate(key) || fb;
+
             try {
                 const [integrations, types] = await Promise.all([
                     API.request('/api/integrations'),
@@ -1348,9 +1386,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const typeHint = (i.name && String(i.name).trim())
                         ? ` (${i.type_name || i.type})`
                         : '';
-                    return `<option value="${i.id}">${label}${typeHint}</option>`;
+                    return `<option value="${window.escapeHtml(i.id)}">${window.escapeHtml(label)}${window.escapeHtml(typeHint)}</option>`;
                 }).join('');
-                const t = (key, fb) => window.i18n.translate(key) || fb;
                 host.innerHTML = `
                     <div class="form-group"><label data-i18n="iw_configured_integration">Configured integration</label><select id="iw-integration" class="form-control"><option value="">—</option>${intOpts}</select></div>
                     <div class="form-group hidden" id="iw-mode-group">

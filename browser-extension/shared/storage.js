@@ -15,6 +15,12 @@ const DEFAULTS = {
     cachedSync: null,
     cacheStale: false,
     locale: 'de-DE',
+    /** Show a Homy home button in the browser toolbar (side panel / quick open). */
+    showHomeButton: true,
+    /** Fetch live widget values from the server when the new tab page opens. */
+    liveData: false,
+    /** Show the search bar at the top of the new tab page. */
+    showSearchBar: true,
 };
 
 export async function getConfig() {

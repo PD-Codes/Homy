@@ -2,7 +2,7 @@
 
 import importlib
 
-from homy.database import WidgetInstance, Integration
+from homy.database import db, WidgetInstance, Integration
 from homy.integration_service import (
     canonical_integration_type,
     fetch_integration_payload_with_overrides,
@@ -61,7 +61,7 @@ def get_widget_config(widget_id):
     """Widget config dict, or {} for preview pseudo-ids."""
     if is_preview_widget_id(widget_id):
         return {}
-    widget = WidgetInstance.query.get(widget_id)
+    widget = db.session.get(WidgetInstance, widget_id)
     if not widget:
         return None
     return widget.config or {}
@@ -83,7 +83,7 @@ def get_integration_for_widget(widget_id, integration_type):
     """Return (integration, resolved_config) or (None, None, error, status_code)."""
     preview_iid = preview_integration_id_from_widget_id(widget_id)
     if preview_iid is not None:
-        integration = Integration.query.get(preview_iid)
+        integration = db.session.get(Integration, preview_iid)
         if not integration:
             return None, None, 'Integration not found', 404
         if not _type_matches(integration, integration_type):
@@ -93,7 +93,7 @@ def get_integration_for_widget(widget_id, integration_type):
             return None, None, f'Widget requires integration type: {label}', 400
         return integration, resolve_integration_config(integration), None, 200
 
-    widget = WidgetInstance.query.get(widget_id)
+    widget = db.session.get(WidgetInstance, widget_id)
     if not widget:
         return None, None, 'Widget not found', 404
 
@@ -101,7 +101,7 @@ def get_integration_for_widget(widget_id, integration_type):
     if not integration_id:
         return None, None, 'No integration linked — configure under Integrations.', 400
 
-    integration = Integration.query.get(int(integration_id))
+    integration = db.session.get(Integration, int(integration_id))
     if not integration:
         return None, None, 'Integration not found', 404
 

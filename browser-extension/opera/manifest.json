@@ -35,8 +35,15 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["newtab.html"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "newtab.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
+  ],
+  "optional_permissions": [
+    "search"
   ]
 }

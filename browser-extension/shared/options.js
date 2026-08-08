@@ -22,8 +22,10 @@ const els = {
     bookmarkFolder: document.getElementById('bookmark-folder'),
     homyList: document.getElementById('homy-favorites-list'),
     browserList: document.getElementById('browser-bookmarks-list'),
-    newTabMode: document.getElementById('new-tab-mode'),
     operaHint: document.getElementById('opera-newtab-hint'),
+    homeButton: document.getElementById('opt-home-button'),
+    liveData: document.getElementById('opt-live-data'),
+    searchBar: document.getElementById('opt-search-bar'),
 };
 
 function updateOperaHint(cfg, locale) {
@@ -157,6 +159,9 @@ async function loadForm() {
     els.newTabMode.value = cfg.newTabMode || 'cached';
     els.syncInterval.value = cfg.syncIntervalMinutes || 60;
     els.bookmarkFolder.value = cfg.bookmarkFolderName || 'Homy';
+    if (els.homeButton) els.homeButton.checked = cfg.showHomeButton !== false;
+    if (els.liveData) els.liveData.checked = !!cfg.liveData;
+    if (els.searchBar) els.searchBar.checked = cfg.showSearchBar !== false;
     renderHomyFavorites(cfg.cachedSync?.favorites, cfg.bookmarkSyncFavoriteIds, locale);
     await renderBrowserBookmarks(cfg.browserImportBookmarkIds, locale);
     if (cfg.lastSyncAt) {
@@ -233,10 +238,42 @@ document.getElementById('btn-save').addEventListener('click', async () => {
         bookmarkFolderName: els.bookmarkFolder.value.trim() || 'Homy',
         bookmarkSyncFavoriteIds: sel.bookmarkSyncFavoriteIds,
         browserImportBookmarkIds: sel.browserImportBookmarkIds,
+        showHomeButton: els.homeButton ? els.homeButton.checked : cfg.showHomeButton,
+        liveData: els.liveData ? els.liveData.checked : cfg.liveData,
+        showSearchBar: els.searchBar ? els.searchBar.checked : cfg.showSearchBar,
         locale: cfg.locale,
     });
     const locale = cfg.locale || 'de-DE';
     els.syncStatus.textContent = t('save_settings', locale);
+});
+
+// Live data rides on the host permission the extension already declares. The search
+// field, however, needs the optional "search" permission to reach the browser's
+// configured provider — request it on enable, drop it again on disable.
+els.searchBar?.addEventListener('change', async () => {
+    if (!chrome.permissions?.request) return;
+    const locale = (await getConfig()).locale || 'de-DE';
+
+    if (!els.searchBar.checked) {
+        try {
+            await chrome.permissions.remove({ permissions: ['search'] });
+        } catch (err) {
+            console.warn('[Homy] could not drop the search permission', err);
+        }
+        return;
+    }
+
+    try {
+        const granted = await chrome.permissions.request({ permissions: ['search'] });
+        // Without the permission the field still works, but Enter falls back to a
+        // generic web search instead of the configured provider. Say so.
+        if (!granted) {
+            els.syncStatus.textContent = t('search_permission_denied', locale);
+        }
+    } catch (err) {
+        console.warn('[Homy] search permission unavailable', err);
+        els.syncStatus.textContent = t('search_permission_denied', locale);
+    }
 });
 
 document.getElementById('btn-sync').addEventListener('click', async () => {

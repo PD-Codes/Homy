@@ -67,17 +67,29 @@ window.WidgetRefreshManager = {
 
     start() {
         this.stopAll();
-        const grid = document.getElementById('dashboard-grid');
-        if (!grid) return;
+        // Both grids: the mobile dashboard was never scheduled, so its widgets
+        // never auto-refreshed.
+        const grids = [
+            [document.getElementById('dashboard-grid'), window.DashboardController],
+            [document.getElementById('mobile-dashboard-grid'), window.MobileDashboardController],
+        ].filter(([grid, ctrl]) => grid && ctrl);
+        if (!grids.length) return;
 
         this._setupIntersectionObserver();
-        grid.querySelectorAll('.widget[data-id]').forEach(el => this.scheduleWidget(el));
-        this._startTickLoop();
+        // Each widget is bound to the controller that owns its grid. Resolving the
+        // controller globally instead would refresh mobile widgets through the desktop
+        // controller, which cannot find them.
+        grids.forEach(([grid, controller]) => {
+            grid.querySelectorAll('.widget[data-id]').forEach(el => this.scheduleWidget(el, controller));
+        });
         this._bindVisibility();
     },
 
     stopAll() {
-        this._entries.forEach(entry => clearTimeout(entry.timerId));
+        this._entries.forEach(entry => {
+            if (entry.chain) entry.chain.cancelled = true;
+            clearTimeout(entry.timerId);
+        });
         this._entries.clear();
         this._visibility.clear();
         if (this._observer) {
@@ -94,19 +106,31 @@ window.WidgetRefreshManager = {
     rescheduleWidget(widgetId) {
         const el = document.querySelector(`.widget[data-id="${widgetId}"]`);
         if (!el) return;
+        // Preserve the owning controller across the reschedule.
+        const controller = this._entries.get(widgetId)?.controller || this._controllerForElement(el);
         this.unscheduleWidget(widgetId);
-        this.scheduleWidget(el);
+        this.scheduleWidget(el, controller);
+    },
+
+    /** Which dashboard controller owns the grid this widget lives in. */
+    _controllerForElement(el) {
+        const grid = el.closest('.dashboard-grid, #dashboard-grid, #mobile-dashboard-grid');
+        if (grid?.id === 'mobile-dashboard-grid') return window.MobileDashboardController || null;
+        if (grid?.id === 'dashboard-grid') return window.DashboardController || null;
+        return null;
     },
 
     unscheduleWidget(widgetId) {
         const entry = this._entries.get(widgetId);
         if (entry) {
+            if (entry.chain) entry.chain.cancelled = true;
             clearTimeout(entry.timerId);
             this._entries.delete(widgetId);
         }
     },
 
-    scheduleWidget(widgetEl) {
+    scheduleWidget(widgetEl, controller = null) {
+        if (!controller) controller = this._controllerForElement(widgetEl);
         const id = widgetEl.getAttribute('data-id');
         const raw = widgetEl.getAttribute('data-widget-raw');
         if (!id || !raw) return;
@@ -124,17 +148,27 @@ window.WidgetRefreshManager = {
         // Spread refreshes to avoid bursts; also delay first run to let page settle
         const staggerMs = this._initialDelayMs + ((this._hashId(id) % intervalSec) * 1000);
 
+        // Shared token so a scheduleNext() call that lands after unscheduleWidget()
+        // cannot resurrect a cancelled entry and keep the timer chain alive forever.
+        const chain = { cancelled: false };
+
         const scheduleNext = (delayMs) => {
+            if (chain.cancelled) return;
             const timerId = setTimeout(async () => {
-                await this._tickWidget(id, widgetEl, intervalSec, scheduleNext);
+                if (chain.cancelled) return;
+                await this._tickWidget(id, widgetEl, intervalSec, scheduleNext, controller);
             }, delayMs);
-            this._entries.set(id, { timerId, intervalSec, el: widgetEl });
+            if (chain.cancelled) {
+                clearTimeout(timerId);
+                return;
+            }
+            this._entries.set(id, { timerId, intervalSec, el: widgetEl, chain, controller });
         };
 
         scheduleNext(staggerMs);
     },
 
-    async _tickWidget(widgetId, widgetEl, intervalSec, scheduleNext) {
+    async _tickWidget(widgetId, widgetEl, intervalSec, scheduleNext, controller = null) {
         if (!document.contains(widgetEl)) {
             this.unscheduleWidget(widgetId);
             return;
@@ -162,7 +196,7 @@ window.WidgetRefreshManager = {
             return;
         }
 
-        const dashCtrl = window.getActiveDashboardController?.();
+        const dashCtrl = controller || window.getActiveDashboardController?.();
         if (dashCtrl) {
             this._inFlight += 1;
             try {
@@ -193,17 +227,8 @@ window.WidgetRefreshManager = {
         });
     },
 
-    _startTickLoop() {
-        if (this._tickHandle) return;
-        this._tickHandle = setInterval(() => {
-            if (document.hidden && this._lastVisibility) {
-                this._paused = true;
-            } else if (!document.hidden && !this._lastVisibility) {
-                this._paused = false;
-            }
-            this._lastVisibility = !document.hidden;
-        }, 1000);
-    },
+    // _startTickLoop() was removed: it polled document.hidden once per second to do
+    // exactly what the visibilitychange listener below already does event-driven.
 
     _bindVisibility() {
         if (this._visibilityBound) return;

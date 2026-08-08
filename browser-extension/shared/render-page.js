@@ -15,6 +15,12 @@ const SKIP_TYPES = new Set(['spacer']);
 /** Options passed into the most recent render (used for favicon base URL). */
 let _opts = {};
 
+/** Page-lifetime state that must survive repeated renders. */
+let _typeAheadBound = false;
+let _didAutoFocus = false;
+/** Clock intervals from the previous render, cleared before each repaint. */
+let _clockTimers = [];
+
 /**
  * @param {SyncPayload} payload
  */
@@ -42,13 +48,20 @@ export function buildViewModel(payload) {
 /**
  * @param {HTMLElement} root
  * @param {SyncPayload} payload
- * @param {{ locale?: string, mode?: string, baseUrl?: string, offline?: boolean, savedAt?: string|null }} opts
+ * @param {{ locale?: string, mode?: string, baseUrl?: string, offline?: boolean,
+ *          savedAt?: string|null, live?: object|null, showSearch?: boolean }} opts
  */
 export function renderNewTabPage(root, payload, opts = {}) {
     const locale = opts.locale || 'de-DE';
     const mode = opts.mode || 'cached';
     _opts = opts;
     const vm = buildViewModel(payload);
+
+    // Drop timers from the previous render before the DOM they write into is thrown
+    // away, otherwise every repaint adds another 1 Hz writer on a detached node.
+    _clockTimers.forEach(clearInterval);
+    _clockTimers = [];
+
     root.innerHTML = '';
     root.className = 'nt-root';
 
@@ -84,9 +97,14 @@ export function renderNewTabPage(root, payload, opts = {}) {
     }
     root.appendChild(header);
 
+    if (opts.showSearch !== false) {
+        root.appendChild(renderSearchBar(locale));
+    }
+
     if (mode === 'favorites') {
         root.appendChild(renderFavoritesSection(vm.favorites, locale, t('newtab_all_favorites', locale)));
         bindSettingsButton(root, locale);
+        bindSearchFiltering(root, locale);
         return;
     }
 
@@ -136,7 +154,143 @@ export function renderNewTabPage(root, payload, opts = {}) {
 
     root.appendChild(main);
     bindSettingsButton(root, locale);
-    startClocks(root);
+    bindSearchFiltering(root, locale);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Search                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Search bar wired to the browser's own default search engine.
+ * Typing filters the links already on the page; Enter hands the query to whatever
+ * search provider the browser is configured with.
+ */
+function renderSearchBar(locale) {
+    const wrap = document.createElement('div');
+    wrap.className = 'nt-search';
+
+    const form = document.createElement('form');
+    form.className = 'nt-search-form';
+    form.setAttribute('role', 'search');
+
+    const input = document.createElement('input');
+    input.type = 'search';
+    input.className = 'nt-search-input';
+    input.id = 'nt-search-input';
+    input.placeholder = t('newtab_search_placeholder', locale);
+    input.setAttribute('aria-label', t('newtab_search_placeholder', locale));
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+
+    const hint = document.createElement('span');
+    hint.className = 'nt-search-hint nt-muted';
+    hint.textContent = t('newtab_search_hint', locale);
+
+    form.appendChild(input);
+    form.appendChild(hint);
+    wrap.appendChild(form);
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const query = input.value.trim();
+        if (!query) return;
+
+        // If exactly one link is still visible, treat Enter as "open that link".
+        const visible = [...document.querySelectorAll('.nt-link:not(.is-filtered-out)')];
+        if (visible.length === 1) {
+            window.location.href = visible[0].href;
+            return;
+        }
+        runBrowserSearch(query);
+    });
+
+    return wrap;
+}
+
+/** Hand a query to the browser's configured default search engine. */
+function runBrowserSearch(query) {
+    // chrome.search.query is the only API that respects the user's chosen provider.
+    // Firefox exposes the same behaviour as browser.search.search.
+    try {
+        if (typeof chrome !== 'undefined' && chrome.search?.query) {
+            chrome.search.query({ text: query, disposition: 'CURRENT_TAB' }, () => {
+                if (chrome.runtime?.lastError) fallbackSearch(query);
+            });
+            return;
+        }
+        if (typeof browser !== 'undefined' && browser.search?.search) {
+            browser.search.search({ query });
+            return;
+        }
+    } catch (err) {
+        console.warn('[Homy] default search provider unavailable', err);
+    }
+    fallbackSearch(query);
+}
+
+/**
+ * Last resort when the search API is unavailable (e.g. the optional "search"
+ * permission was not granted): drive the omnibox-equivalent via a plain navigation.
+ */
+function fallbackSearch(query) {
+    window.location.href = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+}
+
+/** Live-filter the rendered links as the user types. */
+function bindSearchFiltering(root, locale) {
+    const input = root.querySelector('.nt-search-input');
+    if (!input) return;
+
+    const apply = () => {
+        const q = input.value.trim().toLowerCase();
+        const links = [...root.querySelectorAll('.nt-link')];
+        links.forEach((a) => {
+            const hay = `${a.textContent || ''} ${a.getAttribute('href') || ''}`.toLowerCase();
+            a.classList.toggle('is-filtered-out', !!q && !hay.includes(q));
+        });
+
+        // Hide blocks and tab panels that no longer contain a visible link.
+        root.querySelectorAll('.nt-block').forEach((block) => {
+            const hasGrid = block.querySelector('.nt-link-grid');
+            if (!hasGrid) return; // clocks and live widgets stay visible
+            const anyVisible = block.querySelector('.nt-link:not(.is-filtered-out)');
+            block.classList.toggle('is-filtered-out', !!q && !anyVisible);
+        });
+
+        root.classList.toggle('is-searching', !!q);
+    };
+
+    input.addEventListener('input', apply);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            input.value = '';
+            apply();
+        }
+    });
+
+    // Registered once for the lifetime of the page. The page is repainted several
+    // times (cached -> live -> refreshed), so binding this per render would stack up
+    // listeners that each pin a discarded DOM tree in memory.
+    if (!_typeAheadBound) {
+        _typeAheadBound = true;
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const current = document.querySelector('.nt-search-input');
+            if (!current || document.activeElement === current) return;
+            const tag = (document.activeElement?.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            if (e.key.length !== 1) return;
+            current.focus();
+        });
+    }
+
+    // Only steal focus on the very first paint — a later live-data repaint must not
+    // yank the caret out of wherever the user has moved it.
+    if (!_didAutoFocus) {
+        _didAutoFocus = true;
+        input.focus();
+    }
 }
 
 function bindSettingsButton(root, locale) {
@@ -179,6 +333,10 @@ function renderWidgetBlock(widget, allFavorites, locale) {
     const body = document.createElement('div');
     body.className = 'nt-block-body';
 
+    // Live value from /api/extension/widget-data, when the option is enabled and the
+    // server answered in time. Falls through to the stored-links rendering otherwise.
+    const live = _opts.live?.widgets?.[widget.id];
+
     if (type === 'favorites') {
         const favs = filterFavorites(allFavorites, widget.config);
         if (!favs.length) {
@@ -195,6 +353,14 @@ function renderWidgetBlock(widget, allFavorites, locale) {
         }
     } else if (type === 'clock') {
         body.appendChild(renderClock(widget.config, locale));
+    } else if (live && live.ok) {
+        // Checked after the type-specific renderers so enabling live data never
+        // downgrades a widget that already has a dedicated rendering.
+        body.appendChild(renderLiveValue(live, widget, locale));
+        const links = extractConfigLinks(widget.config);
+        if (links.length) {
+            body.appendChild(renderLinkGrid(links.map((l) => ({ title: l.label, url: l.url }))));
+        }
     } else {
         const links = extractConfigLinks(widget.config);
         if (links.length) {
@@ -202,13 +368,86 @@ function renderWidgetBlock(widget, allFavorites, locale) {
         } else {
             const note = document.createElement('p');
             note.className = 'nt-muted';
-            note.textContent = t('newtab_widget_offline_note', locale);
+            // Distinguish "live data is switched off" from "we tried and it failed",
+            // so the message actually tells the user what to do about it.
+            if (live && !live.ok) {
+                note.textContent = `${t('newtab_live_failed', locale)} ${live.message || ''}`.trim();
+            } else if (_opts.liveEnabled) {
+                note.textContent = t('newtab_live_none', locale);
+            } else {
+                note.textContent = t('newtab_widget_offline_note', locale);
+            }
             body.appendChild(note);
         }
     }
 
     section.appendChild(body);
     return section;
+}
+
+/** Render a live value returned by /api/extension/widget-data. */
+function renderLiveValue(live, widget, locale) {
+    const wrap = document.createElement('div');
+    wrap.className = 'nt-live';
+
+    const value = live.value;
+
+    if (value === null || value === undefined || value === '') {
+        wrap.appendChild(emptyBlock(t('newtab_live_none', locale)));
+        return wrap;
+    }
+
+    if (Array.isArray(value)) {
+        const list = document.createElement('ul');
+        list.className = 'nt-live-list';
+        value.slice(0, 8).forEach((item) => {
+            const li = document.createElement('li');
+            li.textContent = typeof item === 'object' && item !== null
+                ? JSON.stringify(item).slice(0, 160)
+                : String(item);
+            list.appendChild(li);
+        });
+        wrap.appendChild(list);
+        if (value.length > 8) {
+            const more = document.createElement('p');
+            more.className = 'nt-muted';
+            more.textContent = `+${value.length - 8}`;
+            wrap.appendChild(more);
+        }
+        return wrap;
+    }
+
+    if (typeof value === 'object') {
+        const grid = document.createElement('dl');
+        grid.className = 'nt-live-kv';
+        Object.entries(value).slice(0, 8).forEach(([k, v]) => {
+            const dt = document.createElement('dt');
+            dt.textContent = k;
+            const dd = document.createElement('dd');
+            dd.textContent = typeof v === 'object' && v !== null
+                ? JSON.stringify(v).slice(0, 120)
+                : String(v);
+            grid.appendChild(dt);
+            grid.appendChild(dd);
+        });
+        wrap.appendChild(grid);
+        return wrap;
+    }
+
+    const stat = document.createElement('div');
+    stat.className = 'nt-live-stat';
+    const num = document.createElement('span');
+    num.className = 'nt-live-value';
+    num.textContent = String(value);
+    stat.appendChild(num);
+    if (live.unit) {
+        const unit = document.createElement('span');
+        unit.className = 'nt-live-unit';
+        unit.textContent = live.unit;
+        stat.appendChild(unit);
+    }
+    wrap.appendChild(stat);
+    return wrap;
 }
 
 function renderFavoritesSection(favorites, locale, heading) {
@@ -396,13 +635,8 @@ function renderClock(config, locale) {
     };
     tick();
     wrap.dataset.clock = '1';
-    wrap._tick = tick;
-    setInterval(tick, 1000);
+    _clockTimers.push(setInterval(tick, 1000));
     return wrap;
-}
-
-function startClocks(root) {
-    /* clocks self-interval in renderClock */
 }
 
 function emptyBlock(text) {

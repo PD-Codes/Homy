@@ -1,9 +1,10 @@
 """Global admin settings stored in the settings table."""
 
+import ipaddress
 import json
 import re
 
-from homy.database import Setting
+from homy.database import db, Setting
 
 # --- Keys ---
 REGISTRATION_ENABLED = 'registration_enabled'
@@ -178,7 +179,7 @@ def get_setting_int(key, default, min_val=None, max_val=None):
 def set_setting(key, value):
     from homy.database import db
 
-    setting = Setting.query.get(key)
+    setting = db.session.get(Setting, key)
     text = str(value) if value is not None else ''
     if setting:
         setting.value = text
@@ -274,9 +275,25 @@ def ip_allowed():
     whitelist = get_setting_raw(SECURITY_IP_WHITELIST, '') or ''
     if not whitelist.strip():
         return True
-    allowed = {x.strip() for x in whitelist.split(',') if x.strip()}
+    entries = [x.strip() for x in whitelist.split(',') if x.strip()]
     ip = client_ip()
-    return ip in allowed
+    if ip in entries:
+        return True
+
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+
+    for entry in entries:
+        try:
+            # strict=False so "10.0.0.1/8" is accepted like a plain network entry
+            network = ipaddress.ip_network(entry, strict=False)
+        except ValueError:
+            continue
+        if addr.version == network.version and addr in network:
+            return True
+    return False
 
 
 def resolve_site_logo_url():

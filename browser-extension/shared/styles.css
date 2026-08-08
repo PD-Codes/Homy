@@ -409,3 +409,124 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .popup { width: 320px; }
 
 .hidden { display: none !important; }
+
+/* -------------------------------------------------------------------------- */
+/* New tab: search bar                                                         */
+/* -------------------------------------------------------------------------- */
+
+.nt-search {
+    max-width: 1100px;
+    margin: 0 auto 18px;
+    padding: 0 16px;
+}
+
+.nt-search-form {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nt-search-input {
+    width: 100%;
+    margin: 0;
+    padding: 12px 16px;
+    font-size: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+}
+
+.nt-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.18);
+}
+
+.nt-search-input::placeholder { color: var(--muted); }
+
+.nt-search-hint {
+    font-size: 0.78rem;
+    padding-left: 4px;
+}
+
+/* Filtering hides non-matching links without reflowing the whole page. */
+.nt-link.is-filtered-out,
+.nt-block.is-filtered-out { display: none; }
+
+/* -------------------------------------------------------------------------- */
+/* New tab: live widget values                                                 */
+/* -------------------------------------------------------------------------- */
+
+.nt-live { margin-bottom: 10px; }
+
+.nt-live-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.nt-live-value {
+    font-size: 1.9rem;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.nt-live-unit {
+    font-size: 0.95rem;
+    color: var(--muted);
+}
+
+.nt-live-list {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 2px;
+}
+
+.nt-live-list li { color: var(--text); }
+
+.nt-live-kv {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(80px, max-content) 1fr;
+    gap: 2px 12px;
+}
+
+.nt-live-kv dt { color: var(--muted); }
+.nt-live-kv dd { margin: 0; overflow-wrap: anywhere; }
+
+/* -------------------------------------------------------------------------- */
+/* Options: checkbox rows                                                      */
+/* -------------------------------------------------------------------------- */
+
+.option-toggle {
+    margin: 12px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #12151a;
+}
+
+.option-toggle > label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--text);
+    font-size: 0.92rem;
+    cursor: pointer;
+}
+
+.option-toggle input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    accent-color: var(--accent);
+    flex: none;
+}
+
+.option-toggle .muted {
+    margin: 6px 0 0 26px;
+    font-size: 0.8rem;
+}

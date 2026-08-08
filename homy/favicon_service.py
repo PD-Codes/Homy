@@ -21,6 +21,11 @@ _CACHE_SUBDIR = 'favicon_cache'
 _USER_AGENT = 'Homy/1.0 (+https://github.com/PD-Codes)'
 _MIN_BYTES = 32
 _CACHE_TTL_SECONDS = 7 * 24 * 3600  # 7 days
+# Unreachable hosts are remembered for a short while so a dead favorite does not
+# re-run the whole candidate cascade on every dashboard load.
+_NEGATIVE_TTL_SECONDS = 3600  # 1 hour
+# Hard wall-clock budget for one favicon resolution, across all candidates.
+_FETCH_DEADLINE_SECONDS = 6.0
 _HTML_CT = re.compile(r'text/html', re.I)
 _LINK_ICON_RE = re.compile(
     r'<link[^>]+(?:rel=["\'](?:shortcut\s+icon|icon|apple-touch-icon(?:-precomposed)?)["\'][^>]*href=["\']([^"\']+)["\']'
@@ -63,12 +68,29 @@ def _parse_page_url(page_url: str):
 
 
 def _read_cache(key: str):
+    """Return the cached entry, or {'negative': True} while a failure is remembered."""
     bin_path, meta_path = _cache_paths(key)
-    if not os.path.isfile(bin_path) or not os.path.isfile(meta_path):
+    if not os.path.isfile(meta_path):
         return None
+    if not os.path.isfile(bin_path):
+        # Meta without payload = negative cache marker.
+        try:
+            with open(meta_path, encoding='utf-8') as f:
+                meta = json.load(f)
+        except Exception:
+            return None
+        if not meta.get('failed'):
+            return None
+        age = time.time() - int(meta.get('fetched_at', 0))
+        if age > _NEGATIVE_TTL_SECONDS:
+            return None
+        meta['negative'] = True
+        return meta
     try:
         with open(meta_path, encoding='utf-8') as f:
             meta = json.load(f)
+        if meta.get('failed'):
+            return None
         fetched_at = int(meta.get('fetched_at', 0))
         if (time.time() - fetched_at) > _CACHE_TTL_SECONDS:
             debug_log(logger, 'cache STALE key=%s age=%ds', key, int(time.time() - fetched_at))
@@ -111,6 +133,26 @@ def _write_cache(key: str, data: bytes, content_type: str, source: str, domain: 
         )
     except Exception as exc:
         logger.warning('Failed to write favicon cache %s: %s', key, exc)
+
+
+def _write_negative_cache(key: str, domain: str, page_url: str, error: str):
+    """Remember a failed lookup for _NEGATIVE_TTL_SECONDS (meta file, no payload)."""
+    bin_path, meta_path = _cache_paths(key)
+    try:
+        if os.path.isfile(bin_path):
+            os.remove(bin_path)
+        meta = {
+            'failed': True,
+            'error': str(error or 'unknown')[:200],
+            'domain': domain,
+            'page_url': page_url,
+            'fetched_at': int(time.time()),
+        }
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump(meta, f)
+        debug_log(logger, 'negative-cached domain=%s key=%s', domain, key)
+    except Exception as exc:
+        logger.warning('Failed to write negative favicon cache %s: %s', key, exc)
 
 
 def _request_url(url: str, timeout=6, accept_html=False):
@@ -195,7 +237,7 @@ def _origin_icon_paths(origin: str):
         yield path
 
 
-def _build_candidates(parsed, page_url: str):
+def _build_candidates(parsed, page_url: str, deadline=None):
     """Yield (source, url) — HTML/local first for homelab/intranet hosts."""
     domain = parsed.netloc
     seen = set()
@@ -208,7 +250,10 @@ def _build_candidates(parsed, page_url: str):
 
     # 1) Fetch page once — discover <link rel="icon"> (works on login pages too)
     try:
-        resp = _request_url(page_url, timeout=8, accept_html=True)
+        html_timeout = 8
+        if deadline is not None:
+            html_timeout = min(html_timeout, max(0.5, deadline - time.time()))
+        resp = _request_url(page_url, timeout=html_timeout, accept_html=True)
         final = resp.url or page_url
         final_parsed = urlparse(final)
         origin = f'{final_parsed.scheme}://{final_parsed.netloc}'
@@ -244,6 +289,17 @@ def fetch_favicon(page_url: str):
     debug_log(logger, 'favicon request page_url=%s domain=%s cache_key=%s', page_url, domain, key)
 
     cached = _read_cache(key)
+    if cached and cached.get('negative'):
+        # A recent lookup already failed — fail fast instead of re-running the cascade.
+        debug_log(logger, 'negative cache HIT domain=%s', domain)
+        return {
+            'ok': False,
+            'error': cached.get('error') or 'all_candidates_failed',
+            'domain': domain,
+            'cache_key': key,
+            'from_cache': True,
+            'page_url': page_url,
+        }
     if cached:
         age = int(time.time()) - int(cached.get('fetched_at', 0))
         debug_log(
@@ -268,12 +324,20 @@ def fetch_favicon(page_url: str):
     debug_log(logger, 'cache MISS domain=%s — fetching candidates', domain)
 
     last_error = None
-    for source, candidate_url in _build_candidates(parsed, page_url):
+    deadline = time.time() + _FETCH_DEADLINE_SECONDS
+    for source, candidate_url in _build_candidates(parsed, page_url, deadline=deadline):
+        remaining = deadline - time.time()
+        # Stop rather than issue a candidate request with a sub-second timeout, which
+        # would fail spuriously and be cached as a real negative result.
+        if remaining < 1.0:
+            last_error = last_error or 'deadline_exceeded'
+            debug_log(logger, 'favicon deadline exceeded for domain=%s', domain)
+            break
         try:
             if candidate_url.lower().endswith('.svg'):
                 debug_log(logger, 'skip SVG candidate %s', candidate_url)
                 continue
-            resp = _request_url(candidate_url, timeout=5)
+            resp = _request_url(candidate_url, timeout=min(5, remaining))
             if _is_valid_image(resp):
                 data = resp.content
                 ctype = _guess_mime(resp)
@@ -302,6 +366,7 @@ def fetch_favicon(page_url: str):
             debug_log(logger, 'candidate failed: %s', last_error)
 
     logger.warning('Favicon failed for %s (%s)', domain, last_error)
+    _write_negative_cache(key, domain, page_url, last_error or 'all_candidates_failed')
     return {
         'ok': False,
         'error': last_error or 'all_candidates_failed',

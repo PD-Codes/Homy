@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Homy</title>
     
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+    <!-- Fonts: self-hosted. Previously loaded from fonts.googleapis.com, which is
+         render-blocking and stalls the whole dashboard when the network (or a local
+         DNS blocker) cannot reach Google. -->
+    <link rel="preload" href="/static/vendor/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/static/vendor/fonts/outfit.css">
+
     <!-- Core & Component Stylesheets -->
     <link rel="stylesheet" href="/static/css/core.css">
     <link rel="stylesheet" href="/static/css/layout.css">
@@ -32,8 +33,9 @@
         })();
     </script>
 
-    <!-- Lucide Icons (pinned version) -->
-    <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+    <!-- Lucide Icons (pinned version, self-hosted). Deferred so it no longer blocks
+         the HTML parser; it is only needed once the DOM is ready. -->
+    <script defer src="/static/vendor/lucide-0.469.0.min.js"></script>
 </head>
 <body class="sidebar-layout">
     
@@ -1067,30 +1069,30 @@
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Core App Logic -->
-    <script src="/static/js/translations.js"></script>
-    <script src="/static/js/api.js"></script>
-    <script src="/static/js/api_cache.js"></script>
-    <script src="/static/js/perf.js"></script>
-    <script src="/static/js/widget_refresh.js"></script>
-    <script src="/static/js/widget_config_fields.js"></script>
-    <script src="/static/js/widget_data_source.js"></script>
-    <script src="/static/js/widget_appearance.js"></script>
-    <script src="/static/js/chart_widgets.js"></script>
-    <script src="/static/js/integration_field_help.js"></script>
-    <script src="/static/js/discord_widget.js"></script>
-    <script src="/static/js/integrations.js"></script>
-    <script src="/static/js/integration_widget_helpers.js"></script>
-    <script src="/static/js/app_dialog.js"></script>
-    <script src="/static/js/modal_util.js"></script>
-    <script src="/static/js/asset_library.js"></script>
-    <script src="/static/js/admin_panel.js"></script>
-    <script src="/static/js/settings_panel.js"></script>
-    <script src="/static/js/toggle_switch.js"></script>
-    <script src="/static/js/avatar_crop.js"></script>
-    <script src="/static/js/user_profile.js"></script>
-    <script src="/static/js/sidebar_ui.js"></script>
-    <script src="/static/js/core.js"></script>
-    <script src="/static/js/grid.js"></script>
-    <script src="/static/js/dashboard.js"></script>
+    <script defer src="/static/js/translations.js"></script>
+    <script defer src="/static/js/api.js"></script>
+    <script defer src="/static/js/api_cache.js"></script>
+    <script defer src="/static/js/perf.js"></script>
+    <script defer src="/static/js/widget_refresh.js"></script>
+    <script defer src="/static/js/widget_config_fields.js"></script>
+    <script defer src="/static/js/widget_data_source.js"></script>
+    <script defer src="/static/js/widget_appearance.js"></script>
+    <script defer src="/static/js/chart_widgets.js"></script>
+    <script defer src="/static/js/integration_field_help.js"></script>
+    <script defer src="/static/js/discord_widget.js"></script>
+    <script defer src="/static/js/integrations.js"></script>
+    <script defer src="/static/js/integration_widget_helpers.js"></script>
+    <script defer src="/static/js/app_dialog.js"></script>
+    <script defer src="/static/js/modal_util.js"></script>
+    <script defer src="/static/js/asset_library.js"></script>
+    <script defer src="/static/js/admin_panel.js"></script>
+    <script defer src="/static/js/settings_panel.js"></script>
+    <script defer src="/static/js/toggle_switch.js"></script>
+    <script defer src="/static/js/avatar_crop.js"></script>
+    <script defer src="/static/js/user_profile.js"></script>
+    <script defer src="/static/js/sidebar_ui.js"></script>
+    <script defer src="/static/js/core.js"></script>
+    <script defer src="/static/js/grid.js"></script>
+    <script defer src="/static/js/dashboard.js"></script>
 </body>
 </html>

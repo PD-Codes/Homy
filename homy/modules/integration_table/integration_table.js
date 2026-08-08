@@ -8,6 +8,9 @@ function parseColumns(columnsText) {
 
 function renderTableValue(container, value, config) {
     const WDS = window.WidgetDataSource;
+    // Everything rendered below comes from a third-party integration response and
+    // from user-supplied column names, so every interpolation must be escaped.
+    const esc = window.escapeHtml;
     const getNestedValue = (obj, path) => WDS.getNestedValue(obj, path);
     const mode = config.mode || 'table';
     const maxRows = parseInt(config.max_rows || '10', 10) || 10;
@@ -26,7 +29,7 @@ function renderTableValue(container, value, config) {
                     const line = typeof it === 'object' && it !== null
                         ? JSON.stringify(it).slice(0, 180)
                         : String(it);
-                    return `<div class="integration-list-item"><span class="muted-text">${line}</span></div>`;
+                    return `<div class="integration-list-item"><span class="muted-text">${esc(line)}</span></div>`;
                 }).join('')}
             </div>`;
         return;
@@ -44,12 +47,12 @@ function renderTableValue(container, value, config) {
             container.innerHTML = `
                 <div class="integration-table-wrap">
                     <table class="integration-table">
-                        <thead><tr>${autoColumns.map((c) => `<th>${c}</th>`).join('')}</tr></thead>
+                        <thead><tr>${autoColumns.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead>
                         <tbody>${items.map((row) => `
                             <tr>${autoColumns.map((col) => {
                                 const v = getNestedValue(row, col);
                                 const txt = typeof v === 'object' && v !== null ? JSON.stringify(v).slice(0, 120) : v;
-                                return `<td>${txt === undefined || txt === null ? '' : String(txt)}</td>`;
+                                return `<td>${txt === undefined || txt === null ? '' : esc(txt)}</td>`;
                             }).join('')}</tr>`).join('')}
                         </tbody>
                     </table>
@@ -60,7 +63,7 @@ function renderTableValue(container, value, config) {
             <div class="integration-table-wrap">
                 <table class="integration-table">
                     <thead><tr><th>Value</th></tr></thead>
-                    <tbody>${items.map((v) => `<tr><td>${String(v)}</td></tr>`).join('')}</tbody>
+                    <tbody>${items.map((v) => `<tr><td>${esc(v)}</td></tr>`).join('')}</tbody>
                 </table>
             </div>`;
         return;
@@ -72,13 +75,13 @@ function renderTableValue(container, value, config) {
             <div class="integration-kv-list">
                 ${entries.map(([k, v]) => {
                     const txt = typeof v === 'object' && v !== null ? JSON.stringify(v).slice(0, 160) : v;
-                    return `<div class="integration-kv-row"><span class="integration-kv-key">${k}</span><span class="integration-kv-val">${txt === undefined || txt === null ? '' : String(txt)}</span></div>`;
+                    return `<div class="integration-kv-row"><span class="integration-kv-key">${esc(k)}</span><span class="integration-kv-val">${txt === undefined || txt === null ? '' : esc(txt)}</span></div>`;
                 }).join('')}
             </div>`;
         return;
     }
 
-    container.innerHTML = `<div class="muted-text text-center" style="padding:16px;">${String(value)}</div>`;
+    container.innerHTML = `<div class="muted-text text-center" style="padding:16px;">${esc(value)}</div>`;
 }
 
 window.WidgetRegistry.register('integration_table', {

@@ -4,12 +4,20 @@ import { checkAuthStatus } from './api.js';
 import { setSession } from './storage.js';
 import { migrateLegacyCache } from './cache.js';
 import { registerNewTabRedirect } from './newtab-guard.js';
+import { registerHomeButton, applyHomeButtonMode } from './home-button.js';
 
 registerNewTabRedirect();
+registerHomeButton();
 
 chrome.runtime.onInstalled.addListener(async () => {
     await migrateLegacyCache();
+    await applyHomeButtonMode();
     chrome.alarms.create('homy-sync', { periodInMinutes: 60 });
+});
+
+// The service worker is torn down when idle; restore the button state on wake-up.
+chrome.runtime.onStartup?.addListener(() => {
+    applyHomeButtonMode();
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {

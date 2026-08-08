@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import logging
 import configparser
@@ -352,6 +353,10 @@ class ModuleManager:
         # Serve module static assets
         @self.app.route('/modules/<module_name>/<path:filename>')
         def serve_module_static(module_name, filename):
+            # The module name becomes part of the base directory, so send_from_directory
+            # cannot protect it — validate it explicitly against traversal.
+            if not re.fullmatch(r'[A-Za-z0-9_-]+', module_name or ''):
+                return jsonify({'error': 'Not Found'}), 404
             module_path = os.path.join(self.modules_dir, module_name)
             return send_from_directory(module_path, filename)
             

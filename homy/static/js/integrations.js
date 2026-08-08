@@ -273,7 +273,9 @@ window.IntegrationsController = {
                 }
                 modal.classList.remove('open');
                 showToast(_t('integrations_saved'), 'success');
-                if (window.ApiCache) ApiCache.invalidate('/api/integrations');
+                // Prefix-based: invalidate() is an exact-key delete and would leave
+                // /api/integrations/types and the per-id entries stale.
+                if (window.ApiCache) ApiCache.invalidateIntegrations();
                 window.dispatchEvent(new CustomEvent('homy-integrations-changed'));
                 await this.load();
             } catch (err) {
@@ -295,7 +297,7 @@ window.IntegrationsController = {
         try {
             await API.request(`/api/integrations/${id}`, { method: 'DELETE' });
             showToast(_t('integrations_deleted'), 'success');
-            if (window.ApiCache) ApiCache.invalidate('/api/integrations');
+            if (window.ApiCache) ApiCache.invalidateIntegrations();
             window.dispatchEvent(new CustomEvent('homy-integrations-changed'));
             await this.load();
         } catch (err) {
