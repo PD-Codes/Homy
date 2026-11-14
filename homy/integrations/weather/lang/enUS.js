@@ -5,7 +5,7 @@ window.i18n.registerModuleTranslations('integration_weather', 'en-US', {
         'OpenWeather location. Filled automatically when you pick a municipality (e.g. Maitenbeth,DE).'
     ),
     'integration_weather_warnings_region_code_help': (
-        'Municipality search sets city and code. NINA: district ARS · DWD: WarncellId '
+        'Municipality search sets city and code. NINA: district ARS · DWD: WarncellId ' +
         '(Maitenbeth: 091830000000 / 809183126).'
     ),
     'integration_weather_warnings_region_code_link_ags_lookup':

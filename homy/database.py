@@ -259,6 +259,32 @@ class Setting(db.Model):
     key = db.Column(db.String(100), primary_key=True)
     value = db.Column(db.Text, nullable=True)
 
+class ApiToken(db.Model):
+    """Personal access token (browser add-on, scripts). Only the SHA-256 hash is stored."""
+    __tablename__ = 'api_tokens'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False, default='Token')
+    token_hash = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    prefix = db.Column(db.String(16), nullable=False, default='')
+    created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+    last_used_at = db.Column(db.DateTime, nullable=True)
+    expires_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        def iso(dt):
+            return dt.isoformat() + 'Z' if dt else None
+        return {
+            'id': self.id,
+            'name': self.name,
+            'prefix': self.prefix,
+            'created_at': iso(self.created_at),
+            'last_used_at': iso(self.last_used_at),
+            'expires_at': iso(self.expires_at),
+        }
+
+
 class AuditLog(db.Model):
     __tablename__ = 'audit_logs'
     

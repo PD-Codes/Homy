@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Homy</title>
+    <link rel="icon" href="/api/branding/logo" />
+    <script>
+      // Paint the remembered theme before the app loads (no white flash).
+      try {
+        var t = JSON.parse(localStorage.getItem('homy.ui.web') || '{}').theme;
+        if (t === 'light') document.documentElement.style.background = '#f3f4f6';
+        else document.documentElement.style.background = '#0e1116';
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

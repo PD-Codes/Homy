@@ -5,7 +5,7 @@ window.i18n.registerModuleTranslations('integration_weather', 'de-DE', {
         'OpenWeather-Ort. Wird bei der Gemeindesuche automatisch gesetzt (z. B. Maitenbeth,DE).'
     ),
     'integration_weather_warnings_region_code_help': (
-        'Gemeindesuche übernimmt Stadt und Code. NINA: Kreis-ARS · DWD: WarncellId '
+        'Gemeindesuche übernimmt Stadt und Code. NINA: Kreis-ARS · DWD: WarncellId ' +
         '(Maitenbeth: 091830000000 / 809183126).'
     ),
     'integration_weather_warnings_region_code_link_ags_lookup':

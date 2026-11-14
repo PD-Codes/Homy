@@ -11,12 +11,21 @@ from homy.admin_settings import (
 
 def apply_security_headers(response):
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+    if response.headers.get('X-Homy-Embed'):
+        # Embed pages are framed by the browser add-on (extension origins) and by Homy itself.
+        response.headers.setdefault(
+            'Content-Security-Policy',
+            "frame-ancestors 'self' chrome-extension: moz-extension: extension:",
+        )
+    else:
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
     response.headers.setdefault('X-XSS-Protection', '1; mode=block')
 
     csp = (get_setting_raw(SECURITY_CSP, '') or '').strip()
     if csp:
+        if response.headers.get('X-Homy-Embed') and 'frame-ancestors' not in csp:
+            csp = csp.rstrip('; ') + "; frame-ancestors 'self' chrome-extension: moz-extension: extension:"
         response.headers['Content-Security-Policy'] = csp
 
     origins_raw = (get_setting_raw(SECURITY_CORS_ORIGINS, '') or '').strip()

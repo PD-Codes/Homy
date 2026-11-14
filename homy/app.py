@@ -38,6 +38,10 @@ module_manager = ModuleManager(app)
 # Initialize Integration Manager
 integration_manager = init_integration_manager(app, module_manager=module_manager)
 
+# API v2 (new web app + browser add-on), bearer-token auth, embed pages
+from homy.api_v2 import init_api_v2, public_widget_dict  # noqa: E402
+init_api_v2(app, module_manager)
+
 init_session_config(app)
 
 with app.app_context():
@@ -111,73 +115,29 @@ def enforce_ip_whitelist():
     return None
 
 
-# Helper functions for layout lock and audit log
-def log_activity(event_type, message, commit=None):
-    """Add an audit log entry to the current session.
-
-    It must never commit the caller's half-finished transaction. When the session
-    already carries pending changes (new/dirty/deleted objects), the entry is only
-    added and the caller's own commit() persists both atomically. When nothing else
-    is pending, the entry is committed right away so it is not lost at teardown.
-    Pass commit=True/False to force the behaviour.
-    """
-    try:
-        username = session.get('username')
-        log_entry = AuditLog(username=username, event_type=event_type, message=message)
-        db.session.add(log_entry)
-        if commit is None:
-            pending_new = [o for o in db.session.new if o is not log_entry]
-            commit = not (pending_new or db.session.dirty or db.session.deleted)
-        if commit:
-            db.session.commit()
-    except Exception as e:
-        logger.error(f"Failed to write audit log: {e}")
-
-def is_layout_locked():
-    setting = db.session.get(Setting, 'global_layout_locked')
-    return setting and setting.value == 'true'
-
-def check_layout_lock():
-    if is_layout_locked() and session.get('role') != 'admin':
-        return True
-    return False
-
-
-def layout_context(layout_type):
-    """Resolve tabs setting key, widget owner user_id, and dashboard_layout filter."""
-    if layout_type == 'public':
-        return 'tabs_public', None, 'desktop'
-    if layout_type == 'mobile':
-        if 'user_id' in session:
-            return f'tabs_mobile_user_{session["user_id"]}', session['user_id'], 'mobile'
-        return 'tabs_public', None, 'mobile'
-    if layout_type == 'guest' or 'user_id' not in session:
-        return 'tabs_public', None, 'desktop'
-    return f'tabs_user_{session["user_id"]}', session['user_id'], 'desktop'
-
-
-def widgets_query(user_id, dashboard_layout):
-    from sqlalchemy import or_
-
-    q = WidgetInstance.query
-    if dashboard_layout == 'desktop':
-        q = q.filter(or_(
-            WidgetInstance.dashboard_layout == 'desktop',
-            WidgetInstance.dashboard_layout.is_(None),
-            WidgetInstance.dashboard_layout == '',
-        ))
-    else:
-        q = q.filter_by(dashboard_layout=dashboard_layout)
-    if user_id is None:
-        return q.filter_by(user_id=None)
-    return q.filter_by(user_id=user_id)
-
+from homy.layout_service import (  # noqa: E402  (shared with api_v2)
+    log_activity, is_layout_locked, check_layout_lock, layout_context, widgets_query,
+)
 
 
 # --- Core Web Page Routing ---
 
+_NEW_APP_INDEX = os.path.join(app.root_path, 'static', 'app', 'index.html')
+
+
 @app.route('/')
 def index():
+    # The new dashboard ships prebuilt (frontend/ -> homy/static/app). Fall back to the
+    # classic UI when it has not been built, and keep the classic UI reachable meanwhile.
+    if os.path.exists(_NEW_APP_INDEX) and request.args.get('ui') != 'classic':
+        resp = send_from_directory(os.path.dirname(_NEW_APP_INDEX), 'index.html', max_age=0)
+        resp.headers['Cache-Control'] = 'no-cache'
+        return resp
+    return render_template('index.html')
+
+
+@app.route('/classic')
+def index_classic():
     return render_template('index.html')
 
 
@@ -946,7 +906,8 @@ def extension_sync():
         'layout': dashboard_layout,
         'exported_at': datetime.now(timezone.utc).isoformat(),
         'tabs': tabs,
-        'widgets': [w.to_dict(vault_map=vault_map) for w in widgets],
+        # Never ship resolved vault secrets to the add-on cache.
+        'widgets': [{**w.to_dict(vault_map={}), 'config': public_widget_dict(w)['config']} for w in widgets],
         'favorites': [f.to_dict() for f in favs],
     })
 

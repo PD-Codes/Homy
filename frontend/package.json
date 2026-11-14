@@ -1,0 +1,27 @@
+{
+  "name": "homy-frontend",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Homy web app and browser add-on (shared widget runtime)",
+  "scripts": {
+    "dev": "vite --config vite.web.config.ts",
+    "build": "npm run build:web && npm run build:ext",
+    "build:web": "vite build --config vite.web.config.ts",
+    "build:ext": "vite build --config vite.ext.config.ts && node scripts/package-extension.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.11.4",
+    "lucide-preact": "^1.73.0",
+    "preact": "^11.2.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "@types/chrome": "^0.3.7",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

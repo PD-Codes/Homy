@@ -97,12 +97,14 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Build browser extension
+      - name: Build web app + browser add-on
         env:
           HOMY_VERSION: ${{ needs.version.outputs.version }}
-        run: npm run build --prefix browser-extension
+        run: |
+          npm ci --prefix frontend
+          npm run build --prefix frontend
 
       - name: Create release
         uses: softprops/action-gh-release@v2

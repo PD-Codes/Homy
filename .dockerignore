@@ -17,3 +17,6 @@ scripts
 tests
 .env
 .env.*
+frontend/node_modules
+frontend/build
+browser-extension
