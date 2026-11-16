@@ -33,7 +33,7 @@ function manifest(browser) {
     version,
     icons: { 16: 'icons/icon-16.png', 32: 'icons/icon-32.png', 48: 'icons/icon-48.png', 128: 'icons/icon-128.png' },
     action: { default_title: 'Homy' },
-    permissions: ['storage', 'bookmarks', 'topSites'],
+    permissions: ['storage', 'unlimitedStorage', 'alarms', 'bookmarks', 'topSites'],
     host_permissions: ['http://*/*', 'https://*/*'],
     chrome_url_overrides: { newtab: 'newtab.html' },
   };

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { CatalogEntry, SchemaField, WidgetInstance } from '@/sdk';
 import { Icon } from './icons';
+import { APPEARANCE_FIELDS, APPEARANCE_KEYS } from './appearance';
 import { getHost, t, updateWidget } from './store';
 
 interface IntegrationRow { id: number; name: string; type: string; enabled?: boolean }
@@ -29,12 +30,31 @@ function Field({ f, value, entry, onChange }: {
       const off = f.off ?? false;
       const checked = String(value ?? f.default) === String(on);
       return (
-        <label class="cf-toggle">
+        <label class="cf-toggle" title={f.help}>
           <input type="checkbox" checked={checked} onChange={(e) => onChange((e.target as HTMLInputElement).checked ? on : off)} />
           <span class="hsw" /> <span>{f.label}</span>
         </label>
       );
     }
+    case 'range': {
+      const n = value === undefined || value === null || value === '' ? Number(f.default ?? 100) : Number(value);
+      return (
+        <label class="cf-field"><span>{f.label} <b>{n}%</b></span>
+          <input type="range" min={f.min ?? 0} max={f.max ?? 100} step={5} value={n}
+            onChange={(e) => onChange(String((e.target as HTMLInputElement).value))} />
+        </label>
+      );
+    }
+    case 'color':
+      return (
+        <label class="cf-field"><span>{f.label}</span>
+          <span class="row">
+            <input type="color" value={/^#[0-9a-f]{6}$/i.test(str) ? str : '#5b8def'} onChange={(e) => onChange((e.target as HTMLInputElement).value)} style={{ width: '44px', padding: '2px', height: '30px' }} />
+            <input type="text" value={str} placeholder="#rrggbb" style={{ flex: 1 }} onChange={(e) => onChange((e.target as HTMLInputElement).value.trim())} />
+            {str && <button type="button" class="ico" title={tr('Zurücksetzen', 'Reset')} onClick={() => onChange('')}><Icon name="reset" size={14} /></button>}
+          </span>
+        </label>
+      );
     case 'select':
       return (
         <label class="cf-field"><span>{f.label}</span>
@@ -80,8 +100,30 @@ function Field({ f, value, entry, onChange }: {
   }
 }
 
+function CustomEditor({ w, entry, onReady }: { w: WidgetInstance; entry: CatalogEntry; onReady: (ok: boolean) => void }) {
+  const tr = t.value;
+  const ref = useRef<HTMLDivElement>(null);
+  const handle = useRef<{ read: () => Record<string, unknown> } | null>(null);
+  const host = getHost();
+  useEffect(() => {
+    if (!ref.current || !host.customConfig || entry.source === 'native') { onReady(false); return; }
+    void host.customConfig(ref.current, w, entry).then((h) => { handle.current = h; onReady(!!h); }).catch(() => onReady(false));
+  }, [w.id]);
+  return (
+    <div class="custom-config">
+      <div ref={ref} class="legacy-config" />
+      {handle.current && (
+        <button type="button" class="hb primary" onClick={() => {
+          try { void updateWidget(w.id, { config: handle.current!.read() }); } catch (e) { alert((e as Error).message); }
+        }}><Icon name="check" /> {tr('Übernehmen', 'Apply')}</button>
+      )}
+    </div>
+  );
+}
+
 export function ConfigForm({ w, entry }: { w: WidgetInstance; entry: CatalogEntry }) {
   const tr = t.value;
+  const [custom, setCustom] = useState<boolean | null>(entry.source === 'native' ? false : null);
   const [advanced, setAdvanced] = useState(false);
   const [json, setJson] = useState('');
   const [jsonErr, setJsonErr] = useState<string | null>(null);
@@ -93,10 +135,19 @@ export function ConfigForm({ w, entry }: { w: WidgetInstance; entry: CatalogEntr
         <input type="text" value={w.title || ''} placeholder={entry.name}
           onChange={(e) => updateWidget(w.id, { title: (e.target as HTMLInputElement).value })} />
       </label>
-      {entry.schema.filter((f) => f.key !== 'integration_id' || f.type === 'integration').map((f) => (
+      {entry.source !== 'native' && <CustomEditor key={w.id} w={w} entry={entry} onReady={setCustom} />}
+      {custom === false && entry.schema.filter((f) => !APPEARANCE_KEYS.has(f.key)).map((f) => (
         <Field key={f.key} f={f} entry={entry} value={w.config[f.key] ?? f.default} onChange={(v) => set(f.key, v)} />
       ))}
-      {!entry.schema.length && <p class="muted">{tr('Keine Einstellungen.', 'No settings.')}</p>}
+      {custom === false && !entry.schema.length && <p class="muted">{tr('Keine Inhalts-Einstellungen.', 'No content settings.')}</p>}
+      <details class="cf-adv" open>
+        <summary>{tr('Darstellung & Aktualisierung', 'Appearance & refresh')}</summary>
+        <div class="cf">
+          {APPEARANCE_FIELDS.map((f) => (
+            <Field key={f.key} f={f} entry={entry} value={w.config[f.key] ?? f.default} onChange={(v) => set(f.key, v)} />
+          ))}
+        </div>
+      </details>
       <details class="cf-adv" open={advanced} onToggle={(e) => {
         const open = (e.target as HTMLDetailsElement).open;
         setAdvanced(open);
@@ -113,9 +164,7 @@ export function ConfigForm({ w, entry }: { w: WidgetInstance; entry: CatalogEntr
               void updateWidget(w.id, { config: parsed });
             } catch (err) { setJsonErr((err as Error).message); }
           }}><Icon name="check" /> {tr('Übernehmen', 'Apply')}</button>
-          {getHost().kind === 'web' && entry.source !== 'native' && (
-            <a class="hb ghost" href="/classic" target="_blank" rel="noopener">{tr('Klassischer Editor', 'Classic editor')} <Icon name="external-link" size={13} /></a>
-          )}
+
         </div>
       </details>
     </div>

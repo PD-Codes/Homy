@@ -3,7 +3,7 @@ import { Icon } from '@/ui/icons';
 import { makeT } from '@/ui/i18n';
 import { Login } from '@/ui/Login';
 import { requestJson } from '@/web/http';
-import { makeServer, normalizeBase } from './host';
+import { makeServer, normalizeBase } from './sync';
 import { store } from './storage';
 import type { Connection } from './storage';
 

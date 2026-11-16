@@ -27,6 +27,17 @@ def init_scheduler(app):
             logger.error('Job processor error: %s', e)
 
     scheduler.add_job(tick, 'interval', seconds=30, id='homy_job_processor', replace_existing=True)
+
+    def warm():
+        try:
+            from homy.cache_warmer import warm_widget_caches
+            warm_widget_caches(app)
+        except Exception as e:
+            logger.error('Cache warm-up error: %s', e)
+
+    # Checks every 30 s; the actual interval comes from the cache_warm_interval setting.
+    scheduler.add_job(warm, 'interval', seconds=30, id='homy_cache_warmer', replace_existing=True,
+                      max_instances=1, coalesce=True)
     scheduler.start()
     _scheduler = scheduler
     logger.info('Background job scheduler started (30s interval)')

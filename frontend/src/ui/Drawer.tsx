@@ -3,9 +3,11 @@ import type { CatalogEntry, Category } from '@/sdk';
 import { ConfigForm } from './ConfigForm';
 import { Icon } from './icons';
 import { THEMES } from './theme';
+import { BackgroundEditor } from './Background';
+import { Segmented, Toggle } from './kit';
 import {
-  activeTab, addTab, addWidget, catalog, catalogEntry, drawer, getHost, moveTab, reload, removeTab,
-  renameTab, saveUi, t, tabs, ui, widgets,
+  activeTab, addTab, addWidget, catalog, catalogEntry, drawer, duplicateTab, getHost, layoutKey, moveTab, reload, removeTab,
+  renameTab, saveUi, selectTab, switchLayout, t, tabs, ui, updateTab, user, widgets,
 } from './store';
 
 const CATS: { id: Category | 'all'; de: string; en: string }[] = [
@@ -86,6 +88,7 @@ function TabManager() {
           <li key={x.id}>
             {host.kind === 'extension' && <span class={`src src-${x.source}`} title={x.source === 'server' ? 'Homy' : tr('Lokal', 'Local')}><Icon name={x.source === 'server' ? 'cloud' : 'monitor'} size={13} /></span>}
             <input value={x.name} onChange={(e) => renameTab(x.id, (e.target as HTMLInputElement).value || x.name)} />
+            <button type="button" class="ico" onClick={() => { selectTab(x.id); drawer.value = { kind: 'tab', id: x.id }; }} title={tr('Tab-Einstellungen', 'Tab settings')}><Icon name="sliders" size={13} /></button>
             <button type="button" class="ico" disabled={i === 0} onClick={() => moveTab(x.id, -1)} title={tr('Nach links', 'Move left')}>‹</button>
             <button type="button" class="ico" disabled={i === tabs.value.length - 1} onClick={() => moveTab(x.id, 1)} title={tr('Nach rechts', 'Move right')}>›</button>
             <button type="button" class="ico danger" onClick={() => {
@@ -106,6 +109,39 @@ function TabManager() {
         )}
         <button type="submit" class="hb"><Icon name="plus" /></button>
       </form>
+    </div>
+  );
+}
+
+function TabPanel({ id }: { id: string }) {
+  const tr = t.value;
+  const tab = tabs.value.find((x) => x.id === id);
+  if (!tab) return <p class="muted pad">{tr('Tab nicht gefunden.', 'Tab not found.')}</p>;
+  const count = widgets.value.filter((w) => w.tab_id === id).length;
+  return (
+    <div class="settings">
+      <div class="set-group">
+        <label class="cf-field"><span>{tr('Name', 'Name')}</span>
+          <input value={tab.name} onChange={(e) => renameTab(tab.id, (e.target as HTMLInputElement).value.trim() || tab.name)} />
+        </label>
+        <div class="row">
+          <button type="button" class="hb" onClick={() => moveTab(tab.id, -1)}>‹ {tr('Nach links', 'Left')}</button>
+          <button type="button" class="hb" onClick={() => moveTab(tab.id, 1)}>{tr('Nach rechts', 'Right')} ›</button>
+          <button type="button" class="hb" onClick={() => {
+            const name = prompt(tr('Name der Kopie', 'Name of the copy'), `${tab.name} (${tr('Kopie', 'copy')})`);
+            if (name?.trim()) void duplicateTab(tab.id, name.trim());
+          }}><Icon name="copy" size={14} /> {tr('Duplizieren', 'Duplicate')}</button>
+          <button type="button" class="hb danger" onClick={() => {
+            if (!count || confirm(tr(`Tab „${tab.name}“ mit ${count} Widgets löschen?`, `Delete tab "${tab.name}" with ${count} widgets?`))) {
+              void removeTab(tab.id); drawer.value = null;
+            }
+          }}><Icon name="trash" size={14} /> {tr('Löschen', 'Delete')}</button>
+        </div>
+      </div>
+      <div class="set-group">
+        <h4>{tr('Hintergrund dieses Tabs', 'Background of this tab')}</h4>
+        <BackgroundEditor value={tab.background} onChange={(bg) => updateTab(tab.id, { background: bg })} />
+      </div>
     </div>
   );
 }
@@ -136,10 +172,28 @@ function SettingsPanel() {
             <option value="cozy">{tr('Luftig', 'Cozy')}</option>
           </select>
         </label>
-        <label class="cf-field"><span>{tr('Hintergrundbild (URL, optional)', 'Background image (URL, optional)')}</span>
-          <input value={ui.value.background || ''} placeholder="https://…" onChange={(e) => saveUi({ background: (e.target as HTMLInputElement).value.trim() })} />
-        </label>
+        <Toggle checked={ui.value.preloadTabs !== false} onChange={(v) => saveUi({ preloadTabs: v })}
+          label={tr('Alle Tabs im Hintergrund vorladen', 'Preload all tabs in the background')} />
+        {host.layouts && host.layouts().includes('mobile') && (
+          <Toggle checked={ui.value.autoMobile !== false} onChange={(v) => saveUi({ autoMobile: v })}
+            label={tr('Auf schmalen Bildschirmen das Mobil-Layout verwenden', 'Use the mobile layout on narrow screens')} />
+        )}
       </div>
+      <div class="set-group">
+        <h4>{tr('Hintergrundbild (alle Tabs)', 'Wallpaper (all tabs)')}</h4>
+        <BackgroundEditor allowFixed value={ui.value.wallpaper || (ui.value.background ? { type: 'url', url: ui.value.background } : undefined)}
+          onChange={(bg) => saveUi({ wallpaper: bg, background: '' })} />
+        <p class="muted small">{tr('Ein Tab-Hintergrund (Tab-Einstellungen) hat Vorrang.', 'A tab background (tab settings) takes precedence.')}</p>
+      </div>
+      {host.layouts && (
+        <div class="set-group">
+          <h4>{tr('Layout bearbeiten', 'Edit layout')}</h4>
+          <Segmented value={layoutKey.value} onChange={(v) => { void switchLayout(v); }} options={host.layouts()
+            .filter((k) => k !== 'public' || user.value?.role === 'admin')
+            .map((k) => ({ value: k, label: k === 'desktop' ? 'Desktop' : k === 'mobile' ? tr('Mobil', 'Mobile') : tr('Öffentlich', 'Public'), icon: k === 'desktop' ? 'monitor' : k === 'mobile' ? 'smartphone' : 'globe' }))} />
+          {layoutKey.value === 'public' && <p class="muted small">{tr('Das öffentliche Layout sehen Gäste und neue Benutzer als Vorlage.', 'Guests see the public layout; new users get it as a template.')}</p>}
+        </div>
+      )}
       <TabManager />
       {Extra && <Extra onChanged={() => { void reload(); }} />}
       {host.menuLinks && (
@@ -166,7 +220,8 @@ export function Drawer() {
   const tr = t.value;
   if (!d) return null;
   const title = d.kind === 'add' ? tr('Widget hinzufügen', 'Add widget')
-    : d.kind === 'config' ? tr('Widget-Einstellungen', 'Widget settings') : tr('Einstellungen', 'Settings');
+    : d.kind === 'config' ? tr('Widget-Einstellungen', 'Widget settings')
+      : d.kind === 'tab' ? tr('Tab-Einstellungen', 'Tab settings') : tr('Einstellungen', 'Settings');
   return (
     <aside class="drawer" aria-label={title}>
       <header>
@@ -178,6 +233,7 @@ export function Drawer() {
         {d.kind === 'add' && <Picker />}
         {d.kind === 'config' && <ConfigPanel id={d.id} />}
         {d.kind === 'settings' && <SettingsPanel />}
+        {d.kind === 'tab' && <TabPanel id={d.id} />}
       </div>
     </aside>
   );

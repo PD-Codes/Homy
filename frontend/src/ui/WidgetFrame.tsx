@@ -3,8 +3,9 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { WidgetContext, WidgetInstance } from '@/sdk';
 import { Icon } from './icons';
+import { refreshSeconds, widgetLook } from './appearance';
 import {
-  activeTab, catalogEntry, drawer, duplicateWidget, getHost, moduleFor, refreshTick, removeWidget, t, updateWidget,
+  catalogEntry, drawer, duplicateWidget, getHost, moduleFor, refreshTick, removeWidget, t, tabs, updateWidget,
 } from './store';
 
 class Boundary extends Component<{ children: ComponentChildren; label: string }, { err: Error | null }> {
@@ -28,14 +29,14 @@ function useTicker(seconds: number | undefined): number {
   return n;
 }
 
-function NativeBody({ w, editing }: { w: WidgetInstance; editing: boolean }) {
+function NativeBody({ w, editing, source, extraTick }: { w: WidgetInstance; editing: boolean; source: 'local' | 'server'; extraTick: number }) {
   const mod = moduleFor(w.type)!;
   const host = getHost();
-  const auto = useTicker(mod.refresh);
-  const tick = refreshTick.value + auto;
+  const auto = useTicker(refreshSeconds(w.config, mod.refresh));
+  const tick = refreshTick.value + auto + extraTick;
   const ctx = useMemo<WidgetContext>(() => ({
     instance: w,
-    tabSource: activeTab.value?.source || 'server',
+    tabSource: source,
     locale: host.locale,
     t: t.value,
     server: host.server(),
@@ -45,16 +46,16 @@ function NativeBody({ w, editing }: { w: WidgetInstance; editing: boolean }) {
     editing,
     refreshTick: tick,
     host: host.caps,
-  }), [w, editing, tick]);
+  }), [w, editing, tick, source]);
   const Cmp = mod.component;
   return <Cmp config={w.config} ctx={ctx} size={{ w: w.w, h: w.h }} />;
 }
 
-function ForeignBody({ w }: { w: WidgetInstance }) {
+function ForeignBody({ w, extraTick }: { w: WidgetInstance; extraTick: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const entry = catalogEntry(w.type);
-  const auto = useTicker(entry?.refresh);
-  const tick = refreshTick.value + auto;
+  const auto = useTicker(refreshSeconds(w.config, entry?.refresh));
+  const tick = refreshTick.value + auto + extraTick;
   const cfgKey = JSON.stringify(w.config);
   useEffect(() => {
     if (!ref.current) return undefined;
@@ -77,27 +78,35 @@ export function WidgetFrame(props: {
   const { w, editing } = props;
   const mod = moduleFor(w.type);
   const entry = catalogEntry(w.type);
+  const tab = tabs.value.find((x) => x.id === w.tab_id);
+  const source = tab?.source || 'server';
   const tr = t.value;
+  const [manual, setManual] = useState(0);
+  const look = widgetLook(w.config);
   const title = (w.title || '').trim();
-  const showHeader = editing || (!!title && !mod?.chromeless);
+  const showHeader = editing || (!look.hideHeader && !!title && !mod?.chromeless);
   const unknown = !mod && !entry;
   const cls = [
     'wf', editing && 'is-editing', props.dragging && 'is-dragging', props.highlighted && 'is-flash',
-    mod?.chromeless && !editing && 'is-chromeless', `wf-${w.type}`,
+    mod?.chromeless && !editing && 'is-chromeless', `wf-${w.type}`, ...look.cls,
   ].filter(Boolean).join(' ');
 
   return (
-    <section class={cls} style={props.style} data-wid={w.id} tabIndex={editing ? 0 : -1} onKeyDown={props.onKey}
+    <section class={cls} style={{ ...look.style, ...props.style }} data-wid={w.id} tabIndex={editing ? 0 : -1} onKeyDown={props.onKey}
       aria-label={title || entry?.name || w.type}>
       {showHeader && (
         <header class="wf-head" onPointerDown={editing ? props.onHandleDown : undefined}>
           {editing && <Icon name="grip" size={14} class="wf-grip" />}
           <span class="wf-title">{title || (editing ? entry?.name || w.type : '')}</span>
-          {editing && (
+          {editing ? (
             <span class="wf-actions" onPointerDown={(e) => e.stopPropagation()}>
               <button type="button" title={tr('Einstellungen', 'Settings')} onClick={() => { drawer.value = { kind: 'config', id: w.id }; }}><Icon name="settings" size={14} /></button>
               <button type="button" title={tr('Duplizieren', 'Duplicate')} onClick={() => duplicateWidget(w.id)}><Icon name="copy" size={14} /></button>
               <button type="button" class="danger" title={tr('Entfernen', 'Remove')} onClick={() => removeWidget(w.id)}><Icon name="trash" size={14} /></button>
+            </span>
+          ) : (
+            <span class="wf-actions wf-hover">
+              <button type="button" title={tr('Aktualisieren', 'Refresh')} onClick={() => setManual((n) => n + 1)}><Icon name="refresh" size={13} /></button>
             </span>
           )}
         </header>
@@ -107,9 +116,9 @@ export function WidgetFrame(props: {
           {unknown
             ? <div class="w-state"><Icon name="box" /> {tr('Unbekannter Widget-Typ', 'Unknown widget type')}: {w.type}</div>
             : mod
-              ? <NativeBody w={w} editing={editing} />
-              : activeTab.value?.source === 'server' || getHost().kind === 'web'
-                ? <ForeignBody w={w} />
+              ? <NativeBody w={w} editing={editing} source={source} extraTick={manual} />
+              : source === 'server' || getHost().kind === 'web'
+                ? <ForeignBody w={w} extraTick={manual} />
                 : <div class="w-state">{tr('Nur mit Homy-Verbindung', 'Requires a Homy connection')}</div>}
         </Boundary>
       </div>

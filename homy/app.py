@@ -96,7 +96,10 @@ def enforce_ip_whitelist():
     path = request.path or ''
     if not path.startswith('/api'):
         return None
+    if request.environ.get('homy.internal'):  # in-process cache warm-up, never set by HTTP clients
+        return None
     public_paths = (
+        '/api/v2/public',
         '/api/auth/status', '/api/auth/login', '/api/setup/init',
         '/api/auth/oidc/login', '/api/auth/oidc/callback',
         '/api/auth/saml/login', '/api/auth/saml/acs',
@@ -1845,8 +1848,8 @@ def admin_save_health_thresholds():
 @app.route('/api/admin/users', methods=['GET'])
 @admin_required
 def admin_get_users():
-    users = User.query.all()
-    return jsonify([u.to_dict() for u in users])
+    users = User.query.order_by(User.username).all()
+    return jsonify([u.to_dict(include_groups=True) for u in users])
 
 @app.route('/api/admin/users', methods=['POST'])
 @admin_required

@@ -1,15 +1,16 @@
 import { h } from 'preact';
-import type { CatalogEntry, Favorite, ServerConnection, Tab, WidgetInstance } from '@/sdk';
-import type { BoardData, Host, UiSettings } from '@/ui/host';
+import type { Background, CatalogEntry, Favorite, ServerConnection, Tab, WidgetInstance } from '@/sdk';
+import type { BoardData, Host, LayoutKey, UiSettings } from '@/ui/host';
+import { PAGES } from './pages';
 import { favorites as favSignal, serverCatalog } from '@/ui/store';
 import { requestJson } from './http';
-import { renderLegacy } from './legacy';
+import { legacyConfig, renderLegacy } from './legacy';
 import { AccountPanel } from './AccountPanel';
 
 interface Bootstrap {
   user: BoardData['user'];
   preferences: Record<string, unknown>;
-  layout: { locked: boolean; tabs: { id: string; name: string }[]; widgets: WidgetInstance[] };
+  layout: { locked: boolean; tabs: { id: string; name: string; background?: Background }[]; widgets: WidgetInstance[] };
   favorites: Favorite[];
   catalog: CatalogEntry[];
 }
@@ -62,10 +63,10 @@ export function createWebHost(locale: string): Host {
       assetUrl: (id) => `/api/assets/${encodeURIComponent(id)}/file`,
     },
     server: () => server,
-    async load() {
-      const b = await requestJson<Bootstrap>('/api/v2/bootstrap?layout=desktop');
+    async load(layout: LayoutKey = 'desktop') {
+      const b = await requestJson<Bootstrap>(`/api/v2/bootstrap?layout=${layout}`);
       return {
-        tabs: b.layout.tabs.map((t): Tab => ({ id: t.id, name: t.name, source: 'server' })),
+        tabs: b.layout.tabs.map((t): Tab => ({ id: t.id, name: t.name, source: 'server', background: t.background })),
         widgets: b.layout.widgets,
         catalog: b.catalog,
         favorites: b.favorites,
@@ -74,20 +75,23 @@ export function createWebHost(locale: string): Host {
         preferences: b.preferences,
       };
     },
-    async persistLayout(tabs, widgets) {
+    async persistLayout(tabs, widgets, layout = 'desktop') {
       await requestJson('/api/v2/layout', {
         method: 'PUT',
         json: {
-          layout: 'desktop',
-          tabs: tabs.map((t) => ({ id: t.id, name: t.name })),
+          layout,
+          tabs: tabs.map((t) => ({ id: t.id, name: t.name, ...(t.background ? { background: t.background } : {}) })),
           positions: widgets.filter((w) => !w.id.startsWith('tmp-')).map((w) => ({ id: w.id, col: w.col, row: w.row, w: w.w, h: w.h, tab_id: w.tab_id })),
         },
       });
     },
-    async createWidget(w, _tab, entry) {
+    async createWidget(w, _tab, entry, layout = 'desktop') {
       const created = await requestJson<ServerWidget>('/api/widgets', {
         method: 'POST',
-        json: { module: moduleFor(entry), type: w.type, title: w.title || '', col: w.col, row: w.row, size_x: w.w, size_y: w.h, config: w.config, tab_id: w.tab_id, dashboard_layout: 'desktop' },
+        json: {
+          module: moduleFor(entry), type: w.type, title: w.title || '', col: w.col, row: w.row, size_x: w.w, size_y: w.h,
+          config: w.config, tab_id: w.tab_id, dashboard_layout: layout === 'mobile' ? 'mobile' : 'desktop', is_public: layout === 'public',
+        },
       });
       return fromServer(created);
     },
@@ -105,6 +109,7 @@ export function createWebHost(locale: string): Host {
     },
     tabSources: () => ['server'],
     renderForeign: (el, w, entry) => renderLegacy(el, w, entry, locale),
+    customConfig: (el, w, entry) => legacyConfig(el, w, entry, locale),
     async loadUiSettings() {
       try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}') as Partial<UiSettings>; } catch { return {}; }
     },
@@ -113,11 +118,25 @@ export function createWebHost(locale: string): Host {
       await requestJson('/api/user/preferences', { method: 'POST', json: { theme: s.theme } }).catch(() => undefined);
     },
     SettingsExtra: () => h(AccountPanel, {}),
-    menuLinks: () => {
-      const de = locale.startsWith('de');
-      return [
-        { label: de ? 'Integrationen & Verwaltung (klassisch)' : 'Integrations & admin (classic)', href: '/classic', icon: 'settings' },
-      ];
+    pages: () => PAGES,
+    layouts: () => ['desktop', 'mobile', 'public'],
+    backgroundUrl: (bg) => (bg.type === 'url' ? bg.url || '' : bg.type === 'asset' && bg.asset_id ? `/api/assets/${encodeURIComponent(String(bg.asset_id))}/file` : ''),
+    async uploadBackground(file) {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('category', 'background');
+      const res = await fetch('/api/assets', { method: 'POST', body: fd, credentials: 'same-origin' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+      return { type: 'asset', asset_id: data.id };
+    },
+    async listBackgrounds() {
+      const list = await requestJson<{ id: number; original_name: string; url: string }[]>('/api/assets?category=background');
+      return list.map((a) => ({ id: a.id, name: a.original_name, url: a.url }));
+    },
+    async duplicateTab(tab, name, layout) {
+      const l = layout === 'desktop' ? 'auto' : layout;
+      await requestJson('/api/tabs/duplicate', { method: 'POST', json: { source_layout: l, target_layout: l, source_tab_id: tab.id, name } });
     },
   };
 }

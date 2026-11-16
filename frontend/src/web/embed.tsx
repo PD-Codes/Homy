@@ -46,7 +46,7 @@ async function main() {
       }} /></div>, root);
       return;
     }
-    root.className = 'embed-legacy';
+    root.className = 'embed-legacy w-foreign';
     renderLegacy(root, widget, entry || undefined, locale);
     // Ask the add-on to refresh by reloading the frame; nothing else to do here.
   } catch (err) {

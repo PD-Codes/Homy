@@ -1,12 +1,12 @@
 import { render } from 'preact';
 import { App } from '@/ui/App';
-import { Login } from '@/ui/Login';
 import { boot } from '@/ui/store';
 import { applyTheme } from '@/ui/theme';
-import { detectLocale, makeT } from '@/ui/i18n';
+import { detectLocale } from '@/ui/i18n';
 import '@/modules';
 import '@/ui/styles.css';
 import { createWebHost } from './host';
+import { startGuest } from './Guest';
 import { requestJson } from './http';
 
 interface Status { logged_in: boolean; needs_setup: boolean; default_locale?: string; site_title?: string; auth_oidc_enabled?: boolean; auth_saml_enabled?: boolean }
@@ -24,16 +24,13 @@ async function start() {
   if (status.site_title) document.title = status.site_title;
   if (!status.logged_in) {
     try { applyTheme(JSON.parse(localStorage.getItem('homy.ui.web') || '{}').theme || 'dark'); } catch { applyTheme('dark'); }
-    render(
-      <Login t={makeT(locale)} policy={status} onDone={() => location.reload()}
-        api={{ post: (path, body) => requestJson(path, { method: 'POST', json: body }), ssoUrl: (p) => `/api/auth/${p}/login` }} />,
-      root,
-    );
+    await startGuest(root, status, locale);
     return;
   }
   const host = createWebHost(locale);
+  const booting = boot(host); // sets the host synchronously before the first render
   render(<App />, root);
-  await boot(host);
+  await booting;
 }
 
 void start();

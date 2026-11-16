@@ -1,4 +1,6 @@
 /// <reference types="chrome" />
+import { store } from './storage';
+import { fetchServerCache } from './sync';
 /**
  * Background worker: toolbar button opens Homy; Opera (no new-tab override) gets its
  * Speed Dial redirected to the add-on page.
@@ -26,3 +28,28 @@ if (!hasOverride && chrome.tabs?.onCreated) {
   chrome.tabs.onCreated.addListener((tab) => redirect(tab.id, tab.url, tab.pendingUrl));
   chrome.tabs.onUpdated.addListener((tabId, change, tab) => { if (change.url) redirect(tabId, change.url, tab.pendingUrl); });
 }
+
+// ---------------------------------------------------------------- background sync
+// Keeps the Homy copy fresh even when no new tab is open, so the next tab paints current data instantly.
+
+const SYNC_ALARM = 'homy-sync';
+
+async function syncNow(): Promise<void> {
+  const conn = await store.connection();
+  if (!conn?.token) return;
+  try {
+    await store.saveCache(await fetchServerCache(conn, 15_000));
+  } catch (err) {
+    console.warn('[Homy] background sync failed', err);
+  }
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  void chrome.alarms.create(SYNC_ALARM, { periodInMinutes: 10 });
+  void syncNow();
+});
+chrome.runtime.onStartup?.addListener(() => {
+  void chrome.alarms.create(SYNC_ALARM, { periodInMinutes: 10 });
+  void syncNow();
+});
+chrome.alarms.onAlarm.addListener((a) => { if (a.name === SYNC_ALARM) void syncNow(); });

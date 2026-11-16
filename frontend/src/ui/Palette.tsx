@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Icon } from './icons';
 import {
-  catalogEntry, drawer, editing, favorites, focusWidget, getHost, paletteOpen, refreshAll, saveUi, selectTab, t,
-  tabs, ui, widgets,
+  catalogEntry, drawer, editing, favorites, focusWidget, getHost, navigate, paletteOpen, refreshAll, saveUi, selectTab, t,
+  tabs, ui, user, widgets,
 } from './store';
 import { THEMES } from './theme';
 import { searchUrl } from './search';
@@ -20,14 +20,15 @@ export function Palette() {
   const items = useMemo<Item[]>(() => {
     const needle = q.trim().toLowerCase();
     const all: Item[] = [
-      ...tabs.value.map((x, i) => ({ id: `tab:${x.id}`, icon: 'layers', label: x.name, hint: `Tab ${i + 1}`, run: () => selectTab(x.id) })),
+      ...tabs.value.map((x, i) => ({ id: `tab:${x.id}`, icon: 'layers', label: x.name, hint: `Tab ${i + 1}`, run: () => { navigate('dashboard'); selectTab(x.id); } })),
+      ...(getHost().pages?.() || []).filter((p) => !p.adminOnly || user.value?.role === 'admin').map((p) => ({ id: `page:${p.id}`, icon: p.icon, label: tr(p.label.de, p.label.en), hint: tr('Seite', 'Page'), run: () => navigate(p.id) })),
       ...favorites.value.map((f) => ({ id: `fav:${f.id}`, icon: 'link', label: f.title, hint: f.category || new URL(f.url, location.href).host, run: () => { location.href = f.url; } })),
       ...widgets.value.map((w) => {
         const e = catalogEntry(w.type);
-        return { id: `w:${w.id}`, icon: e?.icon || 'box', label: w.title || e?.name || w.type, hint: tabs.value.find((x) => x.id === w.tab_id)?.name, run: () => focusWidget(w.id) };
+        return { id: `w:${w.id}`, icon: e?.icon || 'box', label: w.title || e?.name || w.type, hint: tabs.value.find((x) => x.id === w.tab_id)?.name, run: () => { navigate('dashboard'); focusWidget(w.id); } };
       }),
-      { id: 'a:edit', icon: 'pencil', label: tr('Bearbeiten an/aus', 'Toggle edit mode'), hint: 'E', run: () => { editing.value = !editing.value; } },
-      { id: 'a:add', icon: 'plus', label: tr('Widget hinzufügen', 'Add widget'), hint: 'A', run: () => { editing.value = true; drawer.value = { kind: 'add' }; } },
+      { id: 'a:edit', icon: 'pencil', label: tr('Bearbeiten an/aus', 'Toggle edit mode'), hint: 'E', run: () => { navigate('dashboard'); editing.value = !editing.value; } },
+      { id: 'a:add', icon: 'plus', label: tr('Widget hinzufügen', 'Add widget'), hint: 'A', run: () => { navigate('dashboard'); editing.value = true; drawer.value = { kind: 'add' }; } },
       { id: 'a:settings', icon: 'settings', label: tr('Einstellungen', 'Settings'), run: () => { drawer.value = { kind: 'settings' }; } },
       { id: 'a:refresh', icon: 'refresh', label: tr('Alles aktualisieren', 'Refresh everything'), hint: 'R', run: refreshAll },
       { id: 'a:fit', icon: 'maximize', label: tr('An Bildschirm anpassen umschalten', 'Toggle fit to screen'), run: () => saveUi({ fitToScreen: !ui.value.fitToScreen }) },

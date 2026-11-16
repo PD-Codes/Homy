@@ -46,11 +46,23 @@ export interface CatalogEntry {
 
 export type TabSource = 'local' | 'server';
 
+export interface Background {
+  type: 'none' | 'asset' | 'url';
+  asset_id?: number | string;
+  url?: string;
+  /** 0–100 */
+  opacity?: number;
+  size?: 'cover' | 'contain' | 'auto';
+  position?: 'center' | 'top' | 'bottom';
+  fixed?: boolean;
+}
+
 export interface Tab {
   id: string;
   name: string;
   icon?: string;
   source: TabSource;
+  background?: Background;
 }
 
 export interface WidgetInstance {

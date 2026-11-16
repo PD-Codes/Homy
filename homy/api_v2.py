@@ -139,6 +139,39 @@ def delete_token(token_id):
     return jsonify({'success': True})
 
 
+# --------------------------------------------------------------------------- tab backgrounds
+
+def clean_background(bg):
+    """Validate a tab background object; anything unexpected is dropped."""
+    if not isinstance(bg, dict):
+        return None
+    kind = bg.get('type')
+    if kind not in ('none', 'asset', 'url'):
+        return None
+    out = {'type': kind}
+    if kind == 'asset':
+        try:
+            out['asset_id'] = int(bg.get('asset_id'))
+        except (TypeError, ValueError):
+            return None
+    if kind == 'url':
+        url = str(bg.get('url') or '').strip()
+        if not url.lower().startswith(('http://', 'https://')) or len(url) > 1000:
+            return None
+        out['url'] = url
+    try:
+        out['opacity'] = max(0, min(100, int(bg.get('opacity', 100))))
+    except (TypeError, ValueError):
+        out['opacity'] = 100
+    if bg.get('size') in ('cover', 'contain', 'auto'):
+        out['size'] = bg['size']
+    if bg.get('position') in ('center', 'top', 'bottom'):
+        out['position'] = bg['position']
+    if 'fixed' in bg:
+        out['fixed'] = bool(bg['fixed'])
+    return out
+
+
 # --------------------------------------------------------------------------- catalog
 
 def normalize_field(key, field):
@@ -293,7 +326,13 @@ def save_layout():
     if tabs is not None:
         if not isinstance(tabs, list) or not all(isinstance(t, dict) and t.get('id') for t in tabs):
             return jsonify({'error': 'Bad Request', 'message': 'tabs must be a list of {id, name}'}), 400
-        clean = [{k: t[k] for k in ('id', 'name', 'icon', 'background') if k in t} for t in tabs][:50]
+        clean = []
+        for t in tabs[:50]:
+            row = {k: str(t[k])[:80] for k in ('id', 'name', 'icon') if k in t}
+            bg = clean_background(t.get('background'))
+            if bg:
+                row['background'] = bg
+            clean.append(row)
         setting = db.session.get(Setting, tabs_key)
         if setting:
             setting.value = json.dumps(clean)
@@ -336,6 +375,34 @@ def get_widget(widget_id):
     return jsonify({
         'widget': public_widget_dict(widget),
         'entry': catalog_entry(wdef) if wdef else None,
+    })
+
+
+# --------------------------------------------------------------------------- guests
+
+#: Widget types that render without any server data (safe for anonymous visitors).
+GUEST_TYPES = {'clock', 'search_bar', 'quick_weather', 'note', 'countdown', 'spacer', 'favorites'}
+
+
+@bp.route('/api/v2/public', methods=['GET'])
+def public_board():
+    """Start page for visitors who are not signed in (admin setting guest_dashboard_enabled)."""
+    from homy.admin_settings import GUEST_DASHBOARD_ENABLED, auth_policy, get_setting_bool
+
+    policy = auth_policy()
+    if not get_setting_bool(GUEST_DASHBOARD_ENABLED, False):
+        return jsonify({'enabled': False, 'site_title': policy.get('site_title')})
+    widgets = [
+        public_widget_dict(w) for w in widgets_query(None, 'desktop').all()
+        if w.type in GUEST_TYPES
+    ]
+    favorites = FavoriteLink.query.filter_by(user_id=None, is_private=False).order_by(FavoriteLink.order).all()
+    return jsonify({
+        'enabled': True,
+        'site_title': policy.get('site_title'),
+        'tabs': _load_tabs('tabs_public'),
+        'widgets': widgets,
+        'favorites': [f.to_dict() for f in favorites],
     })
 
 

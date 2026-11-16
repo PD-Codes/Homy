@@ -72,20 +72,30 @@ Open [http://localhost:8080](http://localhost:8080). On first run, create the ad
 
 [↑ Back to top](#homy)
 
-## New interface (0.2)
+## New interface (0.3)
 
-The dashboard at `/` is a new single-page app (`frontend/`), shared with the browser add-on:
+Everything runs in one single-page app (`frontend/`), shared with the browser add-on:
 
-* **Faster editing:** `E` toggles edit mode, drag by the header, resize at the corner, arrows/Shift+arrows move/resize the
-  focused widget, deleting has *Undo* instead of a confirm dialog.
-* **Command palette:** `Ctrl+K` or `/` – jump to tabs, favorites and widgets, run actions, or search the web.
-* **Fit to screen:** row height adapts so a tab fits without scrolling (toggle in ⚙).
-* **Inline widgets:** notes/checklists are edited in place, links can be added/edited (right-click) inside the widget.
-* **Browser add-on:** standalone start page with local tabs, optionally synced with Homy (see `browser-extension/README.md`).
-* All classic widgets keep working; administration and integrations still use the classic UI at `/classic`.
+* **Dashboard:** `E` edit mode, drag by the header, resize at the corner, arrows/Shift+arrows move/resize the
+  focused widget, *Undo* instead of confirm dialogs, `Ctrl+K` / `/` command palette, fit-to-screen row height.
+* **Tabs:** all tabs are rendered in the background (instant switching); per-tab background image, rename,
+  duplicate, reorder (edit mode → double-click or right-click a tab). Desktop, mobile and public layouts.
+* **Widget appearance:** hide header, hide action buttons, fully transparent, background opacity, title/body font
+  size, accent color, refresh interval — same config keys as before, so existing layouts keep their look.
+* **Pages:** Favorites, Integrations (with connection test), Settings (appearance, wallpaper, profile, password,
+  2FA, notifications, media, layout backup, add-on tokens) and Administration (health, system, users & groups,
+  sign-in incl. LDAP/OIDC/SAML, mail & API, security, activity log, services & jobs, modules/integrations/ZIP
+  packages, media, full backup/restore). Lists are paginated (20 per page).
+* **Guests:** visitors who are not signed in get a start page (clock, search, sign-in, password reset, registration,
+  first-run setup) — or the public layout when *Administration → System → Guests see the public layout* is on.
+* **Background preloading:** the server refreshes widget data on a schedule (*Preload widget data*, default 120 s),
+  so dashboards and the add-on show current values instantly even when nobody had Homy open.
+* **Browser add-on:** standalone start page with local tabs, optionally synced with Homy; paints from its local copy
+  immediately and refreshes in the background every 10 minutes (see `browser-extension/README.md`).
+* The classic UI stays reachable at `/classic` during the transition.
 
 Building the frontend needs Node.js 22 (`cd frontend && npm ci && npm run build`); the Docker image builds it automatically.
-API v2 (`/api/v2/bootstrap`, `/api/v2/layout`, `/api/v2/tokens`) also accepts `Authorization: Bearer homy_pat_…`.
+API v2 (`/api/v2/bootstrap`, `/api/v2/layout`, `/api/v2/tokens`, `/api/v2/public`) also accepts `Authorization: Bearer homy_pat_…`.
 
 [↑ Back to top](#homy)
 

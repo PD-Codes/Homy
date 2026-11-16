@@ -8,9 +8,10 @@ import { createExtensionHost } from './host';
 
 const locale = detectLocale(chrome.i18n?.getUILanguage?.());
 document.documentElement.lang = locale.slice(0, 2);
-const host = createExtensionHost(locale);
+const host = createExtensionHost(locale, () => { void reload(); });
+const booting = boot(host);
 render(<App />, document.getElementById('app')!);
-void boot(host);
+void booting;
 
 // Another tab changed the layout or the connection: pick it up when this one becomes visible.
 let dirty = false;

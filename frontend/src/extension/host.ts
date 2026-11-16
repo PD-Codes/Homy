@@ -1,43 +1,12 @@
 import { h } from 'preact';
-import type { CatalogEntry, Favorite, ServerConnection, Tab, WidgetInstance } from '@/sdk';
+import type { Favorite, ServerConnection, Tab, WidgetInstance } from '@/sdk';
 import type { BoardData, Host } from '@/ui/host';
-import { requestJson } from '@/web/http';
 import { ConnectPanel } from './ConnectPanel';
 import { defaultBoard, store } from './storage';
+import { fetchServerCache, makeServer, toServerTab, uid } from './sync';
+import type { ServerWidget } from './sync';
+export { makeServer, normalizeBase } from './sync';
 import type { Connection, LocalBoard, ServerCache } from './storage';
-
-const S = 's:';
-const toLocalTab = (id: string) => `${S}${id}`;
-const toServerTab = (id: string) => (id.startsWith(S) ? id.slice(S.length) : id);
-const uid = () => `l-${crypto.randomUUID().slice(0, 8)}`;
-
-interface ServerWidget { id: string; type: string; module: string; title: string | null; col: number; row: number; size_x: number; size_y: number; tab_id: string; config: Record<string, unknown> }
-interface Bootstrap {
-  user: ServerCache['user'];
-  layout: { locked: boolean; tabs: { id: string; name: string }[]; widgets: WidgetInstance[] };
-  favorites: Favorite[];
-  catalog: CatalogEntry[];
-}
-
-export function normalizeBase(url: string): string {
-  const t = url.trim().replace(/\/+$/, '');
-  if (!t) return '';
-  return /^https?:\/\//i.test(t) ? t : `https://${t}`;
-}
-
-export function makeServer(conn: Connection): ServerConnection & { token: string } {
-  const base = normalizeBase(conn.serverUrl);
-  return {
-    baseUrl: base,
-    token: conn.token,
-    fetchJson: (path, init = {}) => requestJson(`${base}${path}`, { ...init, credentials: 'omit' }, { Authorization: `Bearer ${conn.token}` }),
-    embedUrl: (id) => `${base}/embed/widget/${encodeURIComponent(id)}`,
-  };
-}
-
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
-}
 
 function flattenBookmarks(nodes: chrome.bookmarks.BookmarkTreeNode[], folder = '', out: Favorite[] = []): Favorite[] {
   for (const n of nodes) {
@@ -48,7 +17,9 @@ function flattenBookmarks(nodes: chrome.bookmarks.BookmarkTreeNode[], folder = '
   return out;
 }
 
-export function createExtensionHost(locale: string): Host & { reconnect(): Promise<void> } {
+const FRESH_MS = 60_000;
+
+export function createExtensionHost(locale: string, onFresh?: () => void): Host & { reconnect(): Promise<void> } {
   const de = locale.startsWith('de');
   let conn: Connection | null = null;
   let server: (ServerConnection & { token: string }) | null = null;
@@ -98,22 +69,28 @@ export function createExtensionHost(locale: string): Host & { reconnect(): Promi
       if (!board) { board = defaultBoard(de); await store.saveBoard(board); }
       let serverPart: ServerCache | null = null;
       let notice: string | null = null;
-      if (server) {
-        try {
-          const b = await withTimeout(server.fetchJson<Bootstrap>('/api/v2/bootstrap?layout=desktop'), 6000);
-          serverPart = {
-            savedAt: new Date().toISOString(),
-            tabs: b.layout.tabs.map((t) => ({ id: toLocalTab(t.id), name: t.name, source: 'server' as const })),
-            widgets: b.layout.widgets.map((w) => ({ ...w, tab_id: toLocalTab(w.tab_id) })),
-            catalog: b.catalog, favorites: b.favorites, locked: b.layout.locked, user: b.user,
-          };
-          await store.saveCache(serverPart);
-        } catch (err) {
-          serverPart = await store.cache();
-          const status = (err as { status?: number }).status;
-          if (status === 401) notice = de ? 'Homy-Token ungültig – neu verbinden' : 'Homy token invalid – reconnect';
-          else if (serverPart) notice = `${de ? 'Offline – Stand' : 'Offline – as of'} ${new Date(serverPart.savedAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`;
-          else notice = de ? 'Homy nicht erreichbar' : 'Homy unreachable';
+      if (server && conn) {
+        const cached = await store.cache();
+        const age = cached ? Date.now() - new Date(cached.savedAt).getTime() : Infinity;
+        if (cached && age < FRESH_MS) {
+          serverPart = cached;
+        } else if (cached) {
+          // Stale-while-revalidate: paint the cached board now, refresh in the background.
+          serverPart = cached;
+          const c = conn;
+          void fetchServerCache(c).then(async (fresh) => {
+            await store.saveCache(fresh);
+            if (JSON.stringify({ ...fresh, savedAt: '' }) !== JSON.stringify({ ...cached, savedAt: '' })) onFresh?.();
+          }).catch((err) => { if ((err as { status?: number }).status === 401) onFresh?.(); });
+          if (age > 30 * 60_000) notice = `${de ? 'Stand' : 'As of'} ${new Date(cached.savedAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`;
+        } else {
+          try {
+            serverPart = await fetchServerCache(conn, 6000);
+            await store.saveCache(serverPart);
+          } catch (err) {
+            const status = (err as { status?: number }).status;
+            notice = status === 401 ? (de ? 'Homy-Token ungültig – neu verbinden' : 'Homy token invalid – reconnect') : (de ? 'Homy nicht erreichbar' : 'Homy unreachable');
+          }
         }
       }
       const tabs = [...board.tabs, ...(serverPart?.tabs || [])];
@@ -203,6 +180,43 @@ export function createExtensionHost(locale: string): Host & { reconnect(): Promi
       return () => frame.remove();
     },
 
+    backgroundUrl: (bg) => {
+      if (bg.type === 'url') return bg.url || '';
+      if (bg.type !== 'asset' || !bg.asset_id || !server) return '';
+      const key = `asset:${bg.asset_id}`;
+      if (!blobIcons.has(key)) {
+        const s2 = server;
+        blobIcons.set(key, fetch(`${s2.baseUrl}/api/assets/${encodeURIComponent(String(bg.asset_id))}/file`, { headers: { Authorization: `Bearer ${s2.token}` } })
+          .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status))))).then((b) => URL.createObjectURL(b)).catch(() => ''));
+      }
+      return blobIcons.get(key)!;
+    },
+    async uploadBackground(file) {
+      if (server) {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('category', 'background');
+        const res = await fetch(`${server.baseUrl}/api/assets`, { method: 'POST', body: fd, headers: { Authorization: `Bearer ${server.token}` } });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+        return { type: 'asset', asset_id: data.id };
+      }
+      // No server: keep the image locally as a data URL (unlimitedStorage).
+      if (file.size > 8 * 1024 * 1024) throw new Error(de ? 'Bild zu groß (max. 8 MB)' : 'Image too large (max 8 MB)');
+      const url = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result));
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(file);
+      });
+      return { type: 'url', url };
+    },
+    listBackgrounds: async () => {
+      if (!server) return [];
+      const list = await server.fetchJson<{ id: number; original_name: string }[]>('/api/assets?category=background');
+      const resolve = host.backgroundUrl!;
+      return Promise.all(list.map(async (a) => ({ id: a.id, name: a.original_name, url: await resolve({ type: 'asset', asset_id: a.id }) })));
+    },
     loadUiSettings: () => store.ui(),
     saveUiSettings: (s) => store.saveUi(s),
     SettingsExtra: ({ onChanged }) => h(ConnectPanel, { locale, onChanged: async () => { await reconnect(); onChanged(); } }),
@@ -222,7 +236,7 @@ function serverSnapshot(tabs: Tab[], widgets: WidgetInstance[]) {
   const st = tabs.filter((t) => t.source === 'server');
   const ids = new Set(st.map((t) => t.id));
   return {
-    tabs: st.map((t) => ({ id: toServerTab(t.id), name: t.name })),
+    tabs: st.map((t) => ({ id: toServerTab(t.id), name: t.name, ...(t.background ? { background: t.background } : {}) })),
     positions: widgets.filter((w) => ids.has(w.tab_id) && !w.id.startsWith('tmp-'))
       .map((w) => ({ id: w.id, col: w.col, row: w.row, w: w.w, h: w.h, tab_id: toServerTab(w.tab_id) })),
   };

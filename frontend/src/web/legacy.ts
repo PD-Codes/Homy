@@ -5,7 +5,12 @@
 import type { CatalogEntry, WidgetInstance } from '@/sdk';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type LegacyDef = { render: (el: HTMLElement, data: any, config: any) => unknown; onRemove?: (id: string) => void };
+type LegacyDef = {
+  render: (el: HTMLElement, data: any, config: any) => unknown;
+  onRemove?: (id: string) => void;
+  renderConfig?: (el: HTMLElement, data: any, config: any) => unknown;
+  readConfig?: (el: HTMLElement) => Record<string, unknown>;
+};
 const w = window as any;
 
 const CLASSIC_SCRIPTS = [
@@ -134,4 +139,21 @@ export function renderLegacy(host: HTMLElement, widget: WidgetInstance, entry: C
     instances.delete(widget.id);
     try { inst?.def.onRemove?.(widget.id); } catch { /* ignore */ }
   };
+}
+
+/** Mount a classic widget's own config editor, if it has one. */
+export async function legacyConfig(el: HTMLElement, widget: WidgetInstance, entry: CatalogEntry | undefined, locale: string): Promise<{ read: () => Record<string, unknown> } | null> {
+  await ensureRuntime(locale);
+  if (entry?.assets?.css) addStyle(entry.assets.css);
+  if (entry?.assets?.js) await addScript(entry.assets.js);
+  const def: LegacyDef | undefined = w.WidgetRegistry.get(widget.type);
+  if (!def?.renderConfig) return null;
+  const data = {
+    id: widget.id, type: widget.type, module: widget.module, title: widget.title, col: widget.col, row: widget.row,
+    size_x: widget.w, size_y: widget.h, tab_id: widget.tab_id, config: widget.config,
+  };
+  el.innerHTML = '';
+  await def.renderConfig(el, data, { ...widget.config });
+  w.refreshLucideIcons?.(el);
+  return { read: () => (def.readConfig ? def.readConfig(el) || {} : {}) };
 }

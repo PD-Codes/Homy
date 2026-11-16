@@ -3,7 +3,7 @@ import type { WidgetInstance } from '@/sdk';
 import { COLS, bottom, compact, placeAndResolve, stackForMobile } from './grid/layout';
 import { Icon } from './icons';
 import { WidgetFrame } from './WidgetFrame';
-import { canEdit, drawer, editing, highlightId, setLayout, t, tabWidgets, ui } from './store';
+import { canEdit, drawer, editing, highlightId, setLayout, t, ui, widgets } from './store';
 
 const GAP = 8;
 const BASE_ROW = 30;
@@ -19,7 +19,7 @@ interface DragState {
   preview: WidgetInstance[];
 }
 
-export function Grid() {
+export function Grid({ tabId, active }: { tabId: string; active: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [top, setTop] = useState(0);
@@ -27,7 +27,7 @@ export function Grid() {
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
   dragRef.current = drag;
-  const items = tabWidgets.value;
+  const items = widgets.value.filter((w) => w.tab_id === tabId);
   const empty = items.length === 0;
 
   useLayoutEffect(() => {
@@ -43,9 +43,9 @@ export function Grid() {
     ro.observe(el);
     window.addEventListener('resize', measure);
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [empty]);
+  }, [empty, active]);
 
-  const isEditing = editing.value && canEdit();
+  const isEditing = active && editing.value && canEdit();
   const mobile = width > 0 && width < 720;
   const laid = drag ? drag.preview : mobile ? stackForMobile(items) : items;
   const rows = Math.max(bottom(laid), 1);

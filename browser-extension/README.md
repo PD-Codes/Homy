@@ -20,6 +20,8 @@ Packages land in `browser-extension/dist/`:
 * **With Homy:** ⚙ → *Homy-Verbindung* → server URL → sign in (or paste a token from Homy ⚙ → Konto).
   Homy tabs appear next to local tabs (cloud icon), are editable, and stay available offline as a copy.
   Integration widgets (Pi-hole, Zabbix, Proxmox …) are shown via `/embed/widget/<id>`.
+* Paints instantly from the local copy and refreshes it in the background (every 10 minutes and when a tab opens).
+* Tab backgrounds and a wallpaper (uploaded to Homy when connected, otherwise stored locally).
 * Same shortcuts as the web app: `Ctrl+K` / `/` search & commands, `E` edit, `A` add widget, `1–9` tabs, `R` refresh.
 
-Requires Homy ≥ 0.2.0 on the server (API v2, tokens, embed pages).
+Requires Homy ≥ 0.3.0 on the server (API v2, tokens, embed pages).

@@ -1,12 +1,12 @@
 import { batch, computed, signal } from '@preact/signals';
 import { allModules, getModule, moduleToCatalog } from '@/sdk';
 import type { CatalogEntry, Favorite, Tab, WidgetInstance } from '@/sdk';
-import type { Host, UiSettings } from './host';
+import type { Host, LayoutKey, UiSettings } from './host';
 import { applyTheme } from './theme';
 import { findFreeSpot, fixOverlaps } from './grid/layout';
 import { makeT } from './i18n';
 
-export type Drawer = null | { kind: 'add' } | { kind: 'config'; id: string } | { kind: 'settings' };
+export type Drawer = null | { kind: 'add' } | { kind: 'config'; id: string } | { kind: 'settings' } | { kind: 'tab'; id: string };
 
 export interface Toast { id: number; text: string; action?: { label: string; run: () => void }; tone?: 'error' }
 
@@ -27,7 +27,20 @@ export const notice = signal<string | null>(null);
 export const refreshTick = signal(0);
 export const highlightId = signal<string | null>(null);
 export const user = signal<{ username: string; display_name?: string; role?: string } | null>(null);
-export const ui = signal<UiSettings>({ theme: 'dark', fitToScreen: true, density: 'compact' });
+export const ui = signal<UiSettings>({ theme: 'dark', fitToScreen: true, density: 'compact', preloadTabs: true, autoMobile: true });
+export const layoutKey = signal<LayoutKey>('desktop');
+
+/** Hash route: '#/admin/users' → { page: 'admin', sub: 'users' }; '' → dashboard. */
+function parseRoute(): { page: string; sub: string } {
+  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  return { page: parts[0] || 'dashboard', sub: parts[1] || '' };
+}
+export const route = signal(parseRoute());
+if (typeof window !== 'undefined') window.addEventListener('hashchange', () => { route.value = parseRoute(); });
+export function navigate(page: string, sub = ''): void {
+  location.hash = page === 'dashboard' ? '' : `#/${page}${sub ? `/${sub}` : ''}`;
+  if (page === 'dashboard' && location.hash === '') route.value = parseRoute();
+}
 
 export const t = computed(() => makeT(host?.locale || 'de-DE'));
 export const activeTab = computed(() => tabs.value.find((x) => x.id === activeTabId.value) || tabs.value[0]);
@@ -60,14 +73,15 @@ export async function boot(h: Host): Promise<void> {
   host = h;
   const settings = await host.loadUiSettings().catch(() => ({}));
   ui.value = { ...ui.value, ...settings };
-  applyTheme(ui.value.theme);
+  applyTheme(ui.value.theme, ui.value.customTheme);
+  if (ui.value.autoMobile !== false && host.layouts?.().includes('mobile') && window.innerWidth < 720) layoutKey.value = 'mobile';
   await reload();
 }
 
 export async function reload(): Promise<void> {
   loading.value = true;
   try {
-    const data = await host.load();
+    const data = await host.load(layoutKey.value);
     batch(() => {
       tabs.value = data.tabs;
       // Repair overlapping layouts per tab (display only; saved with the next edit).
@@ -87,6 +101,7 @@ export async function reload(): Promise<void> {
     });
     const prefs = data.preferences || {};
     if (!localThemeChosen() && typeof prefs.theme === 'string') {
+      ui.value = { ...ui.value, theme: prefs.theme, customTheme: prefs.custom_theme as Record<string, string> };
       applyTheme(prefs.theme, prefs.custom_theme as Record<string, string>);
     }
   } catch (err) {
@@ -134,8 +149,46 @@ export function addTab(name: string, source: Tab['source']): void {
 }
 
 export function renameTab(id: string, name: string): void {
-  tabs.value = tabs.value.map((x) => (x.id === id ? { ...x, name } : x));
+  updateTab(id, { name });
+}
+
+export function updateTab(id: string, patch: Partial<Tab>): void {
+  tabs.value = tabs.value.map((x) => (x.id === id ? { ...x, ...patch } : x));
   scheduleSave();
+}
+
+export async function duplicateTab(id: string, name: string): Promise<void> {
+  const tab = tabs.value.find((x) => x.id === id);
+  if (!tab) return;
+  if (tab.source === 'server' && host.duplicateTab) {
+    try {
+      await host.duplicateTab(tab, name, layoutKey.value);
+      await reload();
+      const created = tabs.value[tabs.value.length - 1];
+      if (created) selectTab(created.id);
+    } catch (err) { fail(err); }
+    return;
+  }
+  // Local tabs: copy widgets one by one.
+  const prefix = tab.source === 'local' ? 'l' : host.kind === 'extension' ? 's:t' : 't';
+  const newTab: Tab = { ...tab, id: `${prefix}${Date.now().toString(36)}`, name };
+  tabs.value = [...tabs.value, newTab];
+  const copies: WidgetInstance[] = [];
+  for (const w of widgets.value.filter((x) => x.tab_id === id)) {
+    const entry = catalogEntry(w.type);
+    if (!entry) continue;
+    try { copies.push(await host.createWidget({ ...w, tab_id: newTab.id }, newTab, entry, layoutKey.value)); } catch (err) { fail(err); }
+  }
+  widgets.value = [...widgets.value, ...copies];
+  selectTab(newTab.id);
+  scheduleSave();
+}
+
+export async function switchLayout(key: LayoutKey): Promise<void> {
+  if (layoutKey.value === key) return;
+  layoutKey.value = key;
+  activeTabId.value = '';
+  await reload();
 }
 
 export async function removeTab(id: string): Promise<void> {
@@ -174,7 +227,7 @@ let saveTimer: ReturnType<typeof setTimeout> | undefined;
 export function scheduleSave(): void {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    host.persistLayout(tabs.value, widgets.value).catch(fail);
+    host.persistLayout(tabs.value, widgets.value, layoutKey.value).catch(fail);
   }, 500);
 }
 
@@ -199,7 +252,7 @@ export async function addWidget(entry: CatalogEntry): Promise<void> {
     title: '', col: spot.col, row: spot.row, w: entry.size.w, h: entry.size.h, tab_id: tab.id, config,
   };
   try {
-    const created = await host.createWidget(draft, tab, entry);
+    const created = await host.createWidget(draft, tab, entry, layoutKey.value);
     widgets.value = [...widgets.value, created];
     flash(created.id);
     const needsConfig = entry.schema.some((f) => f.type === 'integration' || (f.key === 'location' && !config[f.key]));
@@ -229,7 +282,7 @@ export async function duplicateWidget(id: string): Promise<void> {
   if (!src || !tab || !entry) return;
   const spot = findFreeSpot(widgets.value.filter((w) => w.tab_id === tab.id), src.w, src.h);
   try {
-    const copy = await host.createWidget({ ...src, id: `tmp-${Date.now().toString(36)}`, ...spot }, tab, entry);
+    const copy = await host.createWidget({ ...src, id: `tmp-${Date.now().toString(36)}`, ...spot }, tab, entry, layoutKey.value);
     widgets.value = [...widgets.value, copy];
     flash(copy.id);
   } catch (err) { fail(err); }
@@ -274,8 +327,8 @@ export function refreshAll(): void { refreshTick.value += 1; }
 
 export async function saveUi(patch: Partial<UiSettings>): Promise<void> {
   ui.value = { ...ui.value, ...patch };
-  if (patch.theme) {
-    applyTheme(patch.theme);
+  if (patch.theme || patch.customTheme) {
+    applyTheme(ui.value.theme, ui.value.customTheme);
     try { localStorage.setItem('homy.themeChosen', '1'); } catch { /* ignore */ }
   }
   await host.saveUiSettings(ui.value).catch(fail);
